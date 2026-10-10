@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambient ER intake - judges' view</title>
+<style>
+  :root { --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --bg: #f1f5f9; --brand: #0f766e; --wa: #008069; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
+  header { background: #fff; border-bottom: 1px solid var(--line); padding: 16px 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .grow { flex: 1; }
+  .badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+  .b-live { background: #dcfce7; color: #166534; } .b-offline { background: #fef3c7; color: #92400e; } .b-partly { background: #e0f2fe; color: #075985; }
+  a { color: var(--brand); }
+  main { padding: 18px 24px 40px; max-width: 1500px; margin: 0 auto; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 26px 0 10px; }
+  .stage { display: grid; grid-template-columns: 400px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 1100px) { .stage { grid-template-columns: 1fr; } }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .panel h3 { margin: 0 0 10px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .phone { width: 372px; height: 760px; margin: 0 auto; border-radius: 42px; background: #111; padding: 12px; box-shadow: 0 10px 30px rgba(15,23,42,.25); }
+  .phone iframe { width: 100%; height: 100%; border: 0; border-radius: 32px; background: #efeae2; }
+  .nurse iframe { width: 100%; height: 760px; border: 1px solid var(--line); border-radius: 10px; background: #f1f5f9; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .btn { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 13.5px; cursor: pointer; }
+  .btn.on { background: var(--wa); color: #fff; border-color: var(--wa); }
+  .btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 600; }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .qr { display: flex; gap: 12px; align-items: center; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .qr img { width: 112px; height: 112px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .card .k { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; }
+  .card .v { font-size: 26px; font-weight: 800; margin: 4px 0; }
+  .card .s { color: var(--muted); font-size: 13px; }
+  .card table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+  .card td { padding: 3px 0; border-bottom: 1px solid var(--line); }
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .step { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; position: relative; }
+  .step b { display: block; margin-bottom: 4px; }
+  .step span { color: var(--muted); font-size: 13px; }
+  .step .n { position: absolute; top: 10px; right: 12px; color: #cbd5e1; font-weight: 800; }
+  ul.never { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 14px 32px; margin: 0; line-height: 1.7; font-size: 14px; }
+  .honest { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.55; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 9px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Ambient ER intake</h1>
+    <p>Spanish voice intake in the waiting room, a nurse read-back sheet, and a safety rule that leans toward caution. Administrative aid; not a diagnosis.</p>
+  </div>
+  <span class="grow"></span>
+  <span class="badge" id="mode">...</span>
+  <a id="repo" href="#" target="_blank" hidden>Source on GitHub</a>
+</header>
+<main>
+  <h2>Try both sides</h2>
+  <div class="stage">
+    <div class="panel">
+      <h3>Patient's phone</h3>
+      <div class="phone"><iframe id="patient" title="Patient chat" allow="microphone; autoplay" src="/p?new=1"></iframe></div>
+      <div class="row">
+        <button class="btn on" id="m-real">Use my microphone</button>
+        <button class="btn" id="m-fake">Use a sample voice (Case A)</button>
+        <button class="btn" id="m-reset">New patient</button>
+      </div>
+      <div class="qr"><img id="qr" alt="QR code to open the patient chat on your phone"><div>Or scan with your phone: the same chat, the way a patient in the waiting room would use it.</div></div>
+    </div>
+    <div class="panel nurse">
+      <h3>Nurse station <span class="badge b-partly" style="font-weight:600">updates every 3 s</span></h3>
+      <iframe id="nurse" title="Nurse queue" src="/nurse?embed=1"></iframe>
+      <div class="row">
+        <span style="color:var(--muted);font-size:13.5px">Send a stored sample case straight to the queue:</span>
+        <button class="btn primary" data-demo="A">A: chest pressure</button>
+        <button class="btn primary" data-demo="B">B: ankle sprain</button>
+        <button class="btn primary" data-demo="C">C: ambiguous burning</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>Benchmarks</h2>
+  <div class="cards" id="bench"><div class="card"><div class="s">Loading...</div></div></div>
+
+  <h2>How it works</h2>
+  <div class="flow">
+    <div class="step"><span class="n">1</span><b>Voice note</b><span>The patient answers six short questions by holding a WhatsApp-style mic button, or types. Nothing talks back.</span></div>
+    <div class="step"><span class="n">2</span><b>Speech to text</b><span>Local Whisper turns each voice note into Spanish text, on the laptop, even offline.</span></div>
+    <div class="step"><span class="n">3</span><b>Gemini</b><span>Turns everyday Spanish ("apretón en el pecho", "patatús") into a fixed clinical chart, keeping the patient's own words.</span></div>
+    <div class="step"><span class="n">4</span><b>Jev</b><span>Reads only the structured chart and returns the probability of each ESI level, with a confidence score.</span></div>
+    <div class="step"><span class="n">5</span><b>Safety rule</b><span>Under-triage costs 10x over-triage, so ambiguous cases are flagged more urgent. The math is printed on the sheet.</span></div>
+    <div class="step"><span class="n">6</span><b>Nurse confirms</b><span>The nurse reads the Spanish summary back, fixes any line, and assigns the official ESI. Then the PDF is final.</span></div>
+  </div>
+
+  <h2>What it never does</h2>
+  <ul class="never">
+    <li>It never diagnoses and never shows a triage level to the patient.</li>
+    <li>It never assigns the official ESI. The nurse does; the system only suggests a review tier.</li>
+    <li>It never presents stored examples as model output. Every screen, sheet, and file says which parts were live.</li>
+    <li>It never uses real patient data in this demo. All cases are synthetic.</li>
+  </ul>
+
+  <h2>Honest status</h2>
+  <div class="honest" id="honest">Loading...</div>
+</main>
+<footer>Administrative intake aid. Not a diagnosis. The RN assigns ESI. Synthetic demo data.</footer>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let speechReady = false;
+async function api(path, opts = {}) {
+  const r = await fetch(path, opts);
+  const body = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((body && body.detail && (body.detail.message || body.detail.error)) || ("HTTP " + r.status));
+  return body;
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
+
+function setPatient(fake) {
+  $("#m-real").classList.toggle("on", !fake);
+  $("#m-fake").classList.toggle("on", fake);
+  $("#patient").src = "/p?new=1" + (fake ? "&fakemic=A" : "") + "&t=" + Date.now();
+}
+$("#m-real").addEventListener("click", () => setPatient(false));
+$("#m-fake").addEventListener("click", () => setPatient(true));
+$("#m-reset").addEventListener("click", () => setPatient($("#m-fake").classList.contains("on")));
+$("#qr").src = "/api/qr.svg?path=/p";
+
+document.querySelectorAll("[data-demo]").forEach((b) => b.addEventListener("click", async () => {
+  const all = document.querySelectorAll("[data-demo]");
+  all.forEach((x) => (x.disabled = true));
+  try {
+    const d = await api(`/api/demo/${b.dataset.demo}?voice=${speechReady}`, { method: "POST" });
+    toast(`Sample ${b.dataset.demo} is in the nurse queue as patient ${d.id}`);
+  } catch (e) { toast(e.message); } finally { all.forEach((x) => (x.disabled = false)); }
+}));
+
+function card(k, v, s, extra = "") { return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div>${extra}</div>`; }
+
+async function loadBench() {
+  const h = await api("/api/health");
+  speechReady = h.speech_model_ready;
+  const m = $("#mode");
+  m.textContent = h.mode === "live" ? "LIVE: Gemini + Jev" : h.mode === "offline" ? "OFFLINE: stored examples (labeled)" : "PARTLY LIVE";
+  m.className = "badge " + (h.mode === "live" ? "b-live" : h.mode === "offline" ? "b-offline" : "b-partly");
+  if (h.repo_url) { const a = $("#repo"); a.href = h.repo_url; a.hidden = false; }
+
+  const b = await api("/api/benchmarks");
+  const L = b.live, S = b.snapshot;
+  let html = "";
+  if (S) {
+    html += card("Automated tests", `${S.tests.passed} passed`, `${S.tests.failed ? S.tests.failed + " failed. " : ""}Snapshot from ${esc(S.generated)}.`);
+    const rows = (S.asr || []).map((r) => `<tr><td>Case ${esc(r.case)}</td><td>${r.audio_seconds}s audio</td><td>${(r.ms / 1000).toFixed(1)}s</td><td>${r.wer_pct}% error</td></tr>`).join("");
+    html += card("Speech to text", `${S.asr_median_ms ? (S.asr_median_ms / 1000).toFixed(1) + " s" : "-"}`, `Median per 11-38 s clip, local Whisper ${esc(S.whisper_model)} on a laptop CPU. Word error on synthetic voices:`, `<table>${rows}</table>`);
+    html += card("Audio to finished sheet", `${(S.pipeline_ms_A / 1000).toFixed(1)} s`, `Case A end to end on the laptop (${esc(S.pipeline_mode)}). Gemini and Jev times are not included until keys are added.`);
+  } else {
+    html += card("Snapshot", "not run", "Run: uv run python -m triage.cli bench");
+  }
+  html += card("Safety rule", `${(L.loss.escalation_line_esi4_vs_esi2 * 100).toFixed(1)}%`, `Escalate ESI 4 to ESI 2 once P(ESI 2) passes 1 / (1 + ${L.loss.c_under}). Under-triage costs ${L.loss.c_under}x.`);
+  html += card("Waiting-room queue", `${L.erlang.manual_wait_min} min to ${Math.round(L.erlang.automated_wait_s)} s`, `Erlang-C, 28 arrivals/h, 4 nurses, intake 8 to 3.5 min (assumptions). ${L.erlang.reduction_pct}% shorter wait.`);
+  const ms = (v) => v < 1000 ? `${Math.round(v)} ms` : `${(v / 1000).toFixed(1)} s`;
+  html += card("This server", L.runs_this_server ? `${L.runs_this_server} runs` : "0 runs", L.median_run_ms != null
+    ? `Median processing per intake today: ${ms(L.median_run_ms)} (speech-to-text of the voice notes plus the pipeline${h.mode === "live" ? "" : "; Gemini and Jev are offline, so their time is not included"}).`
+    : "Run a sample case to measure.");
+  $("#bench").innerHTML = html;
+
+  const keys = h.keys;
+  $("#honest").innerHTML = (h.mode === "live"
+    ? "<b>Live:</b> Gemini and Jev are called with real keys. "
+    : `<b>Offline right now:</b> ${keys.gemini ? "" : "Gemini (no key) "}${!keys.gemini && !keys.jev ? "and " : ""}${keys.jev ? "" : "Jev (no key) "}use stored worked examples for the three sample cases, and new patients get the conservative ESI 2 safety hold. Every result says so in its banner. `)
+    + "Speech-to-text runs locally. Audio in the samples is a synthetic voice. The queue numbers are modeling assumptions from the spec, not measurements. "
+    + `Models: Gemini <code>${esc(h.models.gemini)}</code>, Jev <code>${esc(h.models.jev)}</code>, Whisper <code>${esc(h.models.whisper)}</code>.`;
+}
+loadBench().catch((e) => { $("#bench").innerHTML = `<div class="card"><div class="s">Server not reachable: ${esc(e.message)}</div></div>`; });
+</script>
+</body>
+</html>

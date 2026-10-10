@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#008069">
+<title>Sala de Emergencias</title>
+<style>
+  :root {
+    --head: #008069; --accent: #00a884; --done: #25d366; --chat: #efeae2; --qgray: #e9edef;
+    --ink: #111b21; --muted: #667781; --out: #d9fdd3; --bar: #f0f2f5; --red: #ea0038; --tick: #53bdeb;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #d1d7db; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); }
+  #app { max-width: 480px; height: 100dvh; margin: 0 auto; display: flex; flex-direction: column; background: var(--chat); position: relative; overflow: hidden; }
+  .ic { width: 24px; height: 24px; fill: currentColor; flex: none; }
+
+  header.top { background: var(--head); color: #fff; padding: 10px 14px 8px; display: flex; align-items: center; gap: 12px; padding-top: max(10px, env(safe-area-inset-top)); }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: #fff; color: var(--head); display: grid; place-items: center; }
+  .ttl .name { font-weight: 600; font-size: 17px; }
+  .ttl .sub { font-size: 13px; opacity: .85; }
+  .progress { display: flex; gap: 4px; padding: 0 14px 8px; background: var(--head); }
+  .progress i { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.35); transition: background .3s; }
+  .progress i.on { background: var(--done); }
+
+  main.chat { flex: 1; overflow-y: auto; padding: 10px 12px 16px;
+    background-color: var(--chat);
+    background-image: radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px), radial-gradient(rgba(0,0,0,.025) 1px, transparent 1px);
+    background-size: 22px 22px, 34px 34px; background-position: 0 0, 11px 17px; }
+  .row { display: flex; margin: 6px 0; animation: pop .22s ease-out; }
+  .row.in { justify-content: flex-start; } .row.out { justify-content: flex-end; } .row.center { justify-content: center; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .bubble { max-width: 84%; border-radius: 10px; padding: 8px 10px 6px; box-shadow: 0 1px .5px rgba(11,20,26,.13); position: relative; font-size: 16px; line-height: 1.35; }
+  .bubble.sys { background: #ffeecd; color: #54656f; font-size: 13.5px; text-align: center; max-width: 92%; display: flex; gap: 8px; align-items: center; }
+  .bubble.sys .ic { width: 20px; height: 20px; color: var(--accent); }
+
+  .bubble.q { background: var(--qgray); border-top-left-radius: 2px; transition: background .35s, color .35s; }
+  .bubble.q .qhead { display: flex; gap: 10px; align-items: flex-start; }
+  .qic { width: 30px; height: 30px; border-radius: 50%; background: #d1d7db; color: #54656f; display: grid; place-items: center; flex: none; margin-top: 1px; transition: background .35s, color .35s; }
+  .qic .ic { width: 18px; height: 18px; }
+  .bubble.q.current .qic { background: var(--accent); color: #fff; box-shadow: 0 0 0 0 rgba(0,168,132,.5); animation: ring 1.8s infinite; }
+  @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(0,168,132,.45); } 70% { box-shadow: 0 0 0 10px rgba(0,168,132,0); } 100% { box-shadow: 0 0 0 0 rgba(0,168,132,0); } }
+  .bubble.q.green { background: var(--done); color: #fff; }
+  .bubble.q.green .qic { background: #fff; color: var(--done); animation: none; }
+  .parts { display: flex; gap: 6px; flex-wrap: wrap; margin: 7px 0 2px 40px; }
+  .parts:empty { display: none; }
+  .chip { font-size: 12.5px; padding: 2px 8px; border-radius: 10px; background: #d1d7db; color: #54656f; display: inline-flex; align-items: center; gap: 3px; }
+  .chip.ok { background: var(--done); color: #fff; }
+  .chip .ic { width: 14px; height: 14px; }
+  .tag { font-size: 12px; opacity: .9; margin-left: 40px; display: none; align-items: center; gap: 4px; }
+  .bubble.q.covered .tag { display: inline-flex; }
+  .tag .ic { width: 14px; height: 14px; }
+
+  .bubble.a { background: var(--out); border-top-right-radius: 2px; min-width: 90px; }
+  .meta { display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .ticks .ic { width: 16px; height: 16px; }
+  .ticks.done { color: var(--tick); }
+  .ticks.err { color: var(--red); }
+  .voice { display: flex; flex-direction: column; min-width: 230px; }
+  .vrow { display: flex; align-items: center; gap: 10px; }
+  .play { width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: #54656f; display: grid; place-items: center; padding: 0; cursor: pointer; }
+  .play .ic { width: 30px; height: 30px; }
+  .wave { flex: 1; display: flex; align-items: center; gap: 2px; height: 28px; }
+  .wave b { width: 3px; border-radius: 2px; background: #8696a0; display: block; }
+  .voice.playing .wave b { background: var(--accent); }
+  .err-line { color: var(--red); font-size: 13.5px; margin-top: 4px; display: flex; gap: 4px; align-items: center; }
+  .err-line .ic { width: 16px; height: 16px; }
+
+  .bubble.thanks { background: #fff; text-align: center; max-width: 92%; padding: 18px 16px 14px; }
+  .bubble.thanks .big { width: 56px; height: 56px; border-radius: 50%; background: var(--done); color: #fff; display: grid; place-items: center; margin: 0 auto 10px; }
+  .bubble.thanks .big .ic { width: 34px; height: 34px; }
+  .bubble.thanks p { margin: 4px 0; }
+  .again { margin-top: 10px; font-size: 13px; color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
+
+  footer.composer { display: flex; align-items: flex-end; gap: 8px; padding: 8px 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); background: var(--bar); position: relative; }
+  .field { flex: 1; background: #fff; border-radius: 24px; min-height: 48px; display: flex; align-items: center; padding: 0 16px; }
+  .field input { border: 0; outline: 0; font-size: 17px; width: 100%; background: transparent; color: var(--ink); }
+  .recbar, .lockedbar { flex: 1; min-height: 48px; display: none; align-items: center; gap: 10px; padding: 0 14px; background: #fff; border-radius: 24px; overflow: hidden; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--red); animation: blink 1s infinite; flex: none; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .timer { font-variant-numeric: tabular-nums; font-size: 16px; min-width: 40px; }
+  .slide { color: var(--muted); font-size: 14.5px; margin-left: auto; display: flex; align-items: center; gap: 2px; white-space: nowrap; transition: transform .05s; }
+  .slide .ic { width: 18px; height: 18px; transform: rotate(-90deg); }
+  .trash { border: 0; background: none; color: #54656f; padding: 4px; cursor: pointer; display: grid; place-items: center; }
+  .mic { width: 52px; height: 52px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; display: grid; place-items: center; flex: none; cursor: pointer;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform .15s; }
+  .mic .ic { width: 26px; height: 26px; pointer-events: none; }
+  .mic .i-send { display: none; }
+  .composer.typing .mic .i-mic, .composer.locked .mic .i-mic { display: none; }
+  .composer.typing .mic .i-send, .composer.locked .mic .i-send { display: block; }
+  .composer.recording .field, .composer.locked .field { display: none; }
+  .composer.recording .recbar { display: flex; }
+  .composer.recording .mic { transform: scale(1.18); }
+  .composer.locked .recbar { display: none; }
+  .composer.locked .lockedbar { display: flex; }
+  .composer.disabled { opacity: .45; pointer-events: none; }
+  .lock { position: absolute; right: 14px; bottom: 78px; width: 44px; padding: 8px 0 6px; border-radius: 22px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    display: none; flex-direction: column; align-items: center; color: #54656f; }
+  .composer.recording .lock { display: flex; }
+  .lock .ic { width: 22px; height: 22px; }
+  .lock .chev { animation: up 1.2s infinite; }
+  @keyframes up { 0% { transform: translateY(4px); opacity: .3; } 60% { transform: translateY(-3px); opacity: 1; } 100% { opacity: 0; } }
+
+  .toast { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); background: rgba(17,27,33,.88); color: #fff; padding: 9px 14px; border-radius: 18px; font-size: 14px;
+    max-width: 88%; text-align: center; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="avatar" id="avatar"></div>
+    <div class="ttl"><div class="name">Sala de Emergencias</div><div class="sub">Responda con un audio o escriba</div></div>
+  </header>
+  <div class="progress" id="progress"></div>
+  <main class="chat" id="chat" aria-live="polite"></main>
+  <footer class="composer" id="composer">
+    <div class="field"><input id="text" placeholder="Escriba aquí" autocomplete="off" enterkeyhint="send" aria-label="Escriba su respuesta"></div>
+    <div class="recbar"><span class="dot"></span><span class="timer" id="timer">0:00</span><span class="slide" id="slide"><span id="chev-left"></span>Deslice para cancelar</span></div>
+    <div class="lockedbar"><button class="trash" id="trash" aria-label="Borrar grabación"></button><span class="dot"></span><span class="timer" id="timer2">0:00</span></div>
+    <button class="mic" id="mic" aria-label="Mantenga presionado para grabar"></button>
+    <div class="lock" id="lock"><span id="lock-ic"></span><span class="chev" id="lock-chev"></span></div>
+  </footer>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+/* Patient intake chat. No AI ever answers: the screen only shows the questions, the patient's own
+   answers, and green check marks. The triage result is never shown to the patient. */
+const P = {
+  mic: "M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z",
+  send: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z",
+  lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
+  lockOpen: "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z",
+  chev: "M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z",
+  trash: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+  play: "M8 5v14l11-7z",
+  pause: "M6 19h4V5H6v14zm8-14v14h4V5h-4z",
+  check: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  ticks: "M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z",
+  clock: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z",
+  hospital: "M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z",
+  chat: "M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z",
+  body: "M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z",
+  scale: "M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z",
+  arrows: "M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z",
+  alert: "M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z",
+};
+const svg = (n, cls = "") => `<svg viewBox="0 0 24 24" class="ic ${cls}" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+
+const qs = new URLSearchParams(location.search);
+const API = (qs.get("api") || "").replace(/\/$/, "");
+const FAKEMIC = qs.get("fakemic");          // e.g. ?fakemic=A : the mic sends a stored sample clip (for judges without a microphone)
+const $ = (s) => document.querySelector(s);
+const chat = $("#chat"), composer = $("#composer"), input = $("#text"), mic = $("#mic");
+let SID = null, QUESTIONS = [], STATE = null, finished = false, busy = false;
+
+$("#avatar").innerHTML = svg("hospital");
+mic.innerHTML = svg("mic", "i-mic") + svg("send", "i-send");
+$("#trash").innerHTML = svg("trash");
+$("#lock-ic").innerHTML = svg("lockOpen");
+$("#lock-chev").innerHTML = svg("chev");
+$("#chev-left").innerHTML = svg("chev");
+
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, opts);
+  let body = null;
+  try { body = await r.json(); } catch (e) { /* not JSON */ }
+  if (!r.ok) {
+    const err = new Error((body && body.detail && body.detail.error) || ("http_" + r.status));
+    err.status = r.status;
+    throw err;
+  }
+  return body;
+}
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove("show"), 2600);
+}
+const hhmm = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const scrollDown = () => requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+function addSystem(html) { const row = el("div", "row center"); row.appendChild(el("div", "bubble sys", html)); chat.appendChild(row); scrollDown(); }
+
+function appendQuestion(q) {
+  const row = el("div", "row in");
+  row.id = "q-" + q.id;
+  const b = el("div", "bubble q");
+  b.innerHTML = `<div class="qhead"><span class="qic">${svg(q.icon)}</span><span class="qtext"></span></div>
+                 <div class="parts"></div><span class="tag">${svg("check")}Ya lo dijo</span>`;
+  b.querySelector(".qtext").textContent = q.es;
+  row.appendChild(b);
+  chat.appendChild(row);
+  return row;
+}
+
+function updateQuestion(row, q, st, isNext) {
+  const b = row.querySelector(".bubble");
+  b.classList.toggle("green", st.green);
+  b.classList.toggle("current", isNext && !st.green);
+  b.classList.toggle("covered", st.status === "covered");
+  b.querySelector(".qic").innerHTML = st.green ? svg("check") : svg(q.icon);
+  const parts = b.querySelector(".parts");
+  parts.innerHTML = "";
+  if (st.status === "partial" && q.parts.length > 1) {
+    for (const p of q.parts) {
+      const ok = st.parts[p.id];
+      const c = el("span", "chip" + (ok ? " ok" : ""), (ok ? svg("check") : "") + p.es);
+      parts.appendChild(c);
+    }
+  }
+}
+
+function render() {
+  $("#progress").innerHTML = QUESTIONS.map((q) => `<i class="${STATE.questions[q.id].green ? "on" : ""}"></i>`).join("");
+  for (const q of QUESTIONS) {
+    const st = STATE.questions[q.id];
+    const isNext = q.id === STATE.next;
+    let row = document.getElementById("q-" + q.id);
+    if (!row && (st.green || isNext)) row = appendQuestion(q);
+    if (row) updateQuestion(row, q, st, isNext);
+    if (isNext) break;
+  }
+  scrollDown();
+  if (STATE.done && !finished) finish();
+}
+
+/* ------------------------------------------------------------------ answer bubbles */
+function bars(seed) {
+  let x = seed % 2147483647 || 7, out = "";
+  for (let i = 0; i < 32; i++) { x = (x * 48271) % 2147483647; out += `<b style="height:${6 + (x % 20)}px"></b>`; }
+  return out;
+}
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+function addVoiceBubble(blob, seconds) {
+  const row = el("div", "row out");
+  const b = el("div", "bubble a voice");
+  const url = URL.createObjectURL(blob);
+  b.innerHTML = `<div class="vrow"><button class="play" aria-label="Escuchar">${svg("play")}</button><div class="wave">${bars(blob.size)}</div></div>
+                 <div class="meta"><span class="dur">${seconds != null ? fmt(seconds) : ""}</span>&nbsp;<span>${hhmm()}</span><span class="ticks">${svg("clock")}</span></div>`;
+  const audio = new Audio(url);
+  const btn = b.querySelector(".play");
+  audio.addEventListener("loadedmetadata", () => { if (seconds == null && isFinite(audio.duration)) b.querySelector(".dur").textContent = fmt(audio.duration); });
+  audio.addEventListener("ended", () => { btn.innerHTML = svg("play"); b.classList.remove("playing"); });
+  btn.addEventListener("click", () => {
+    if (audio.paused) { audio.play(); btn.innerHTML = svg("pause"); b.classList.add("playing"); }
+    else { audio.pause(); btn.innerHTML = svg("play"); b.classList.remove("playing"); }
+  });
+  row.appendChild(b);
+  chat.appendChild(row);
+  scrollDown();
+  return b;
+}
+
+function addTextBubble(text) {
+  const row = el("div", "row out");
+  const b = el("div", "bubble a", `<div class="txt"></div><div class="meta"><span>${hhmm()}</span><span class="ticks">${svg("clock")}</span></div>`);
+  b.querySelector(".txt").textContent = text;
+  row.appendChild(b);
+  chat.appendChild(row);
+  scrollDown();
+  return b;
+}
+
+function setTicks(b, ok, msg) {
+  const t = b.querySelector(".ticks");
+  t.className = "ticks " + (ok ? "done" : "err");
+  t.innerHTML = ok ? svg("ticks") : svg("alert");
+  if (!ok) b.appendChild(el("div", "err-line", svg("alert") + "<span></span>")).querySelector("span").textContent = msg;
+}
+
+function errorText(err) {
+  if (err.message === "no_speech") return "No se escuchó. Intente otra vez.";
+  if (err.status === 503) return "El audio no está disponible ahora. Escriba su respuesta.";
+  return "No se pudo enviar. Intente otra vez.";
+}
+
+async function postAnswer(bubble, body) {
+  busy = true;
+  try {
+    const r = await api(`/api/sessions/${SID}/answers`, { method: "POST", ...body });
+    setTicks(bubble, true);
+    STATE = r.state;
+    render();
+  } catch (err) {
+    setTicks(bubble, false, errorText(err));
+  } finally {
+    busy = false;
+  }
+}
+
+function sendText() {
+  const text = input.value.trim();
+  if (!text || !STATE.next || finished) return;
+  input.value = "";
+  composer.classList.remove("typing");
+  const b = addTextBubble(text);
+  postAnswer(b, { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question_id: STATE.next, text }) });
+}
+
+function sendVoice(blob, seconds) {
+  if (!STATE.next || finished) return;
+  const b = addVoiceBubble(blob, seconds);
+  const t = blob.type || "";
+  const ext = t.includes("mp4") ? "m4a" : t.includes("ogg") ? "ogg" : t.includes("wav") ? "wav" : "webm";
+  const fd = new FormData();
+  fd.append("question_id", STATE.next);
+  fd.append("audio", blob, "nota." + ext);
+  postAnswer(b, { body: fd });
+}
+
+/* ------------------------------------------------------------------ recording: hold, slide up to lock, slide left to cancel */
+let recording = false, locked = false, pressing = false, startX = 0, startY = 0, t0 = 0, tick = null, rec = null, chunks = [], stream = null;
+
+function updateTimer() { const s = (Date.now() - t0) / 1000; $("#timer").textContent = fmt(s); $("#timer2").textContent = fmt(s); }
+function stopStream() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; } }
+function resetDrag() { $("#slide").style.transform = ""; $("#lock").style.transform = ""; $("#lock-ic").innerHTML = svg("lockOpen"); }
+
+function beginUI() {
+  recording = true;
+  t0 = Date.now();
+  updateTimer();
+  composer.classList.add("recording");
+  tick = setInterval(updateTimer, 200);
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+
+async function startRecording() {
+  pressing = true;
+  if (FAKEMIC) { beginUI(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { pressing = false; toast("Este teléfono no permite grabar aquí. Escriba su respuesta."); return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
+  } catch (e) {
+    pressing = false;
+    toast("Permita el micrófono o escriba su respuesta.");
+    return;
+  }
+  if (!pressing && !locked) { stopStream(); toast("Ahora mantenga presionado el micrófono para hablar."); return; }
+  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"].find((m) => MediaRecorder.isTypeSupported(m)) || "";
+  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  chunks = [];
+  rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) chunks.push(ev.data); };
+  rec.start(250);
+  beginUI();
+}
+
+async function stopRecording(send) {
+  if (!recording) return;
+  recording = false; pressing = false; locked = false;
+  clearInterval(tick);
+  const seconds = (Date.now() - t0) / 1000;
+  composer.classList.remove("recording", "locked");
+  resetDrag();
+  let blob = null;
+  if (FAKEMIC) {
+    if (send) blob = await (await fetch(`${API}/api/fixtures/${encodeURIComponent(FAKEMIC)}/audio`)).blob();
+  } else if (rec) {
+    blob = await new Promise((res) => { rec.onstop = () => res(new Blob(chunks, { type: rec.mimeType || "audio/webm" })); rec.stop(); });
+  }
+  stopStream();
+  if (!send) return;
+  if (!FAKEMIC && seconds < 0.7) { toast("Mantenga presionado el micrófono para grabar."); return; }
+  sendVoice(blob, FAKEMIC ? null : seconds);
+}
+
+function lockRecording() {
+  locked = true;
+  composer.classList.add("locked");
+  composer.classList.remove("recording");
+  $("#lock-ic").innerHTML = svg("lock");
+}
+function cancelRecording() { stopRecording(false); toast("Grabación borrada"); }
+
+mic.addEventListener("pointerdown", async (e) => {
+  e.preventDefault();
+  if (finished || busy || !STATE || !STATE.next) return;
+  if (composer.classList.contains("typing")) { sendText(); return; }
+  if (locked) { stopRecording(true); return; }
+  try { mic.setPointerCapture(e.pointerId); } catch (_) { /* older browsers */ }
+  startX = e.clientX; startY = e.clientY;
+  await startRecording();
+});
+mic.addEventListener("pointermove", (e) => {
+  if (!recording || locked) return;
+  const dx = e.clientX - startX, dy = e.clientY - startY;
+  $("#lock").style.transform = `translateY(${Math.max(Math.min(dy, 0), -70)}px)`;
+  $("#slide").style.transform = `translateX(${Math.min(dx, 0)}px)`;
+  if (dy < -70) lockRecording();
+  else if (dx < -110) cancelRecording();
+});
+mic.addEventListener("pointerup", () => { pressing = false; if (recording && !locked) stopRecording(true); });
+mic.addEventListener("pointercancel", () => { pressing = false; if (recording && !locked) cancelRecording(); });
+mic.addEventListener("contextmenu", (e) => e.preventDefault());
+$("#trash").addEventListener("click", cancelRecording);
+input.addEventListener("input", () => composer.classList.toggle("typing", input.value.trim().length > 0));
+input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendText(); } });
+
+/* ------------------------------------------------------------------ start and finish */
+async function finish() {
+  finished = true;
+  composer.classList.add("disabled");
+  try { await api(`/api/sessions/${SID}/submit`, { method: "POST" }); } catch (e) { /* the nurse side can still recover it */ }
+  sessionStorage.removeItem("sid");
+  const row = el("div", "row center");
+  const b = el("div", "bubble thanks", `<div class="big">${svg("check")}</div>
+    <p><b>Gracias.</b></p><p>Ya enviamos sus respuestas.</p><p>Una enfermera lo va a llamar pronto.</p>
+    <button class="again" id="again">Empezar de nuevo</button>`);
+  row.appendChild(b);
+  chat.appendChild(row);
+  b.querySelector("#again").addEventListener("click", () => { location.search = "?new=1" + (FAKEMIC ? "&fakemic=" + FAKEMIC : "") + (API ? "&api=" + encodeURIComponent(API) : ""); });
+  scrollDown();
+}
+
+async function start() {
+  if (qs.get("new") === "1") sessionStorage.removeItem("sid");
+  try {
+    QUESTIONS = (await api("/api/questions")).questions;
+    const saved = sessionStorage.getItem("sid");
+    if (saved) {
+      try {
+        const st = await api(`/api/sessions/${saved}/state`);
+        if (st.status === "in_progress") { SID = saved; STATE = st.state; }
+      } catch (e) { /* start a new one */ }
+    }
+    if (!SID) {
+      const s = await api("/api/sessions", { method: "POST" });
+      SID = s.id; STATE = s.state;
+      sessionStorage.setItem("sid", SID);
+    }
+  } catch (e) {
+    addSystem(svg("alert") + "<span>No hay conexión. Avise en la recepción.</span>");
+    composer.classList.add("disabled");
+    return;
+  }
+  addSystem(svg("mic") + "<span>Mantenga presionado el micrófono para hablar. Deslice hacia arriba para no tener que sostenerlo. También puede escribir.</span>");
+  render();
+}
+start();
+</script>
+</body>
+</html>

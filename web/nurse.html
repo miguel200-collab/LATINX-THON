@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triage queue - nurse view</title>
+<style>
+  :root { --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --panel: #f8fafc; --bg: #f1f5f9; --brand: #0f766e;
+          --e1: #b91c1c; --e2: #ea580c; --e3: #ca8a04; --e4: #15803d; --e5: #1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); font-size: 14px; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; }
+  .counts { color: var(--muted); font-size: 13px; }
+  .grow { flex: 1; }
+  .badge { font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; letter-spacing: .02em; }
+  .b-live { background: #dcfce7; color: #166534; } .b-fixture { background: #fef3c7; color: #92400e; } .b-hold { background: #fee2e2; color: #b91c1c; }
+  .b-offline { background: #fef3c7; color: #92400e; } .b-partly { background: #e0f2fe; color: #075985; }
+  button { font: inherit; cursor: pointer; }
+  .btn { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  .btn:hover { background: var(--panel); }
+  .btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 600; }
+  .btn.primary:disabled { opacity: .4; cursor: not-allowed; }
+  .wrap { display: grid; grid-template-columns: 300px 1fr; gap: 14px; padding: 14px; align-items: start; }
+  @media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } }
+  .queue { display: flex; flex-direction: column; gap: 8px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 54px 1fr; gap: 10px; cursor: pointer; text-align: left; }
+  .card.sel { outline: 2px solid var(--brand); }
+  .card.confirmed { opacity: .62; }
+  .esi { border-radius: 8px; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 13px; line-height: 1.1; text-align: center; padding: 6px 0; }
+  .esi small { display: block; font-weight: 600; font-size: 9.5px; opacity: .9; }
+  .e1 { background: var(--e1); } .e2 { background: var(--e2); } .e3 { background: var(--e3); } .e4 { background: var(--e4); } .e5 { background: var(--e5); } .e0 { background: #94a3b8; }
+  .card .top { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+  .card .pid { font-weight: 700; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .flags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+  .flag { font-size: 11px; background: #fee2e2; color: #991b1b; padding: 1px 6px; border-radius: 6px; }
+  .empty { color: var(--muted); padding: 18px; background: #fff; border: 1px dashed var(--line); border-radius: 10px; text-align: center; }
+
+  .detail { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-height: 300px; }
+  .dhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .dhead h2 { margin: 0; font-size: 19px; }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
+  .banner { margin: 12px 0; padding: 9px 12px; border-radius: 8px; font-size: 13px; }
+  .banner b { display: block; font-size: 13.5px; }
+  .banner.live { background: #dcfce7; color: #14532d; } .banner.fixture { background: #fef3c7; color: #78350f; } .banner.hold { background: #fee2e2; color: #7f1d1d; }
+  .banner ul { margin: 4px 0 0 18px; padding: 0; }
+  .tier { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .tier .esi { font-size: 26px; padding: 12px 0; }
+  .tier .esi small { font-size: 11px; }
+  .bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; align-items: end; }
+  .bar { text-align: center; font-size: 11.5px; color: var(--muted); }
+  .bar .col { height: 70px; display: flex; align-items: flex-end; justify-content: center; }
+  .bar .fill { width: 70%; background: #cbd5e1; border-radius: 4px 4px 0 0; min-height: 2px; }
+  .bar.sug .fill { background: var(--e2); }
+  .bar b { color: var(--ink); display: block; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 18px 0 8px; }
+  .readback { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 14px; font-size: 15.5px; line-height: 1.5; }
+  .readback .en { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 7px 6px; text-align: left; vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  td.q { font-style: italic; }
+  .warn { color: #b91c1c; font-size: 11.5px; font-style: normal; display: block; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: #fff; padding: 4px 9px; font-size: 12.5px; }
+  .seg button.on.ok { background: #dcfce7; color: #166534; font-weight: 700; }
+  .seg button.on.fix { background: #fee2e2; color: #991b1b; font-weight: 700; }
+  .fixin { margin-top: 5px; width: 100%; border: 1px solid #fca5a5; border-radius: 6px; padding: 4px 6px; font: inherit; }
+  .answers { display: flex; flex-direction: column; gap: 8px; }
+  .ans { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .ans .qq { font-weight: 600; } .ans .qe { color: var(--muted); font-size: 12px; }
+  .ans .tx { margin-top: 4px; }
+  .ans audio { height: 32px; margin-top: 6px; width: 100%; }
+  .esipick { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .esipick button { width: 56px; height: 44px; border-radius: 10px; border: 2px solid transparent; color: #fff; font-weight: 800; font-size: 15px; opacity: .55; }
+  .esipick button.on { opacity: 1; border-color: var(--ink); transform: scale(1.06); }
+  .confirmed-box { background: #dcfce7; border: 1px solid #86efac; color: #14532d; border-radius: 10px; padding: 10px 14px; font-weight: 600; }
+  .links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .links a { text-decoration: none; }
+  .foot { color: var(--muted); font-size: 12px; margin-top: 18px; }
+  .modal { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: none; place-items: center; z-index: 5; }
+  .modal.show { display: grid; }
+  .modal .box { background: #fff; border-radius: 14px; padding: 18px; text-align: center; max-width: 340px; }
+  .modal img { width: 240px; height: 240px; }
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Triage queue</h1>
+  <span class="counts" id="counts"></span>
+  <span class="badge" id="mode"></span>
+  <span class="grow"></span>
+  <button class="btn" data-demo="A">Sample A</button>
+  <button class="btn" data-demo="B">Sample B</button>
+  <button class="btn" data-demo="C">Sample C</button>
+  <button class="btn" id="qrbtn">Patient QR</button>
+</header>
+<div class="wrap">
+  <div class="queue" id="queue"></div>
+  <div class="detail" id="detail"><div class="empty">Select a patient. New intakes appear on the left within a few seconds.</div></div>
+</div>
+<div class="modal" id="modal"><div class="box"><h3 style="margin-top:0">Patient check-in</h3><img id="qrimg" alt="QR code to the patient chat"><div id="qrurl" class="counts"></div><p><button class="btn" id="qrclose">Close</button></p></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const qs = new URLSearchParams(location.search);
+const API = (qs.get("api") || "").replace(/\/$/, "");
+const $ = (s) => document.querySelector(s);
+const FIELDS = [
+  ["location", "Location"], ["onset", "Onset"], ["provocation", "Provocation"], ["quality", "Quality"],
+  ["radiation", "Radiation"], ["severity_1_to_10", "Severity"], ["timing_duration_hours", "Duration"], ["red_flag_symptoms", "Red flags"],
+];
+const KIND = { live: ["live", "LIVE"], fixture: ["fixture", "STORED EXAMPLE"], hold: ["hold", "SAFETY HOLD"] };
+let selected = null, detail = null, openedAt = null, decisions = {}, esiChoice = null, clock = null, lastQueue = [];
+
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, opts);
+  const body = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((body && body.detail && (body.detail.message || body.detail.error)) || ("HTTP " + r.status));
+  return body;
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2500); }
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pretty = (s) => String(s ?? "").replaceAll("_", " ");
+const mins = (sec) => sec < 60 ? `${Math.max(0, Math.round(sec))} s` : `${Math.floor(sec / 60)} min`;
+const clockStr = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+function value(chart, key) {
+  const v = chart[key];
+  if (key === "severity_1_to_10") return v == null ? "not stated" : `${v}/10`;
+  if (key === "timing_duration_hours") return v == null ? "not stated" : `${v} hours`;
+  if (Array.isArray(v)) return v.length ? v.map(pretty).join(", ") : "none";
+  return pretty(v);
+}
+
+/* ------------------------------------------------------------------ queue */
+function renderQueue(list) {
+  lastQueue = list;
+  const c = { waiting: 0, in_review: 0, confirmed: 0 };
+  list.forEach((p) => c[p.status]++);
+  $("#counts").textContent = `${c.waiting} waiting · ${c.in_review} in review · ${c.confirmed} confirmed`;
+  const q = $("#queue");
+  if (!list.length) { q.innerHTML = `<div class="empty">No patients yet. Scan the patient QR, or press a Sample button.</div>`; return; }
+  q.innerHTML = list.map((p) => {
+    const t = p.status === "confirmed" ? p.official_esi : p.suggested_review_tier;
+    const kind = KIND[p.label_kind] || ["hold", "?"];
+    const flags = (p.red_flags || []).map((f) => `<span class="flag">${esc(pretty(f))}</span>`).join("");
+    return `<button class="card ${p.id === selected ? "sel" : ""} ${p.status}" data-id="${p.id}">
+      <div class="esi e${t || 0}">ESI ${t || "?"}<small>${p.status === "confirmed" ? "official" : "suggested"}</small></div>
+      <div><div class="top"><span class="pid">Patient ${esc(p.id)}</span><span class="badge b-${kind[0]}">${kind[1]}</span></div>
+      <div class="sub">${pretty(p.status)} · waiting ${mins(p.wait_seconds)}${p.location && p.location !== "unknown" ? " · " + esc(pretty(p.location)) : ""}</div>
+      <div class="flags">${flags}</div></div></button>`;
+  }).join("");
+  q.querySelectorAll(".card").forEach((b) => b.addEventListener("click", () => select(b.dataset.id)));
+}
+async function loadQueue() {
+  try { renderQueue((await api("/api/queue")).patients); } catch (e) { $("#counts").textContent = "Server not reachable"; }
+}
+
+/* ------------------------------------------------------------------ detail */
+async function select(id) {
+  selected = id;
+  let d = await api(`/api/sessions/${id}`);
+  if (d.status === "waiting") d = await api(`/api/sessions/${id}/open`, { method: "POST" });
+  detail = d; openedAt = Date.now(); decisions = {}; esiChoice = null;
+  renderDetail();
+  renderQueue(lastQueue);
+}
+
+function renderDetail() {
+  const d = detail, r = d.result, box = $("#detail");
+  if (!r) { box.innerHTML = `<div class="empty">This intake has not been sent yet.</div>`; return; }
+  const chart = r.extraction.chart, flag = r.flag, kind = (KIND[r.labels.kind] || KIND.hold)[0];
+  const sug = flag.suggested_review_tier, done = d.status === "confirmed";
+  const unverified = new Set(r.extraction.unverified_quotes || []);
+  let why;
+  if (flag.probabilities == null) why = "No probabilities: conservative safety hold. Take the history directly.";
+  else why = `Model's most likely tier: ESI ${flag.raw_argmax_tier}. ` + (flag.override_triggered
+      ? `The safety rule raised it to ESI ${sug} because under-triage costs 10x more than over-triage.`
+      : "The safety rule agrees.") + (flag.source === "fixture" ? " (Stored example probabilities, not model output.)" :
+      flag.jev_confidence != null ? ` Jev confidence ${flag.jev_confidence.toFixed(2)}.` : "");
+  const bars = flag.probabilities ? `<div class="bars">${flag.probabilities.map((p, i) => `
+      <div class="bar ${i + 1 === sug ? "sug" : ""}"><div class="col"><div class="fill" style="height:${Math.max(2, p * 100)}%"></div></div>
+      <b>${Math.round(p * 100)}%</b>ESI ${i + 1}<br>loss ${flag.expected_losses[i].toFixed(2)}</div>`).join("")}</div>` : "";
+  const rows = FIELDS.map(([key, label]) => {
+    const quote = chart.source_phrases[key];
+    const dec = done ? (d.confirmation.fields[key] || { status: "ok" }) : decisions[key];
+    const ctl = done
+      ? (dec.status === "corrected" ? `<b style="color:#b91c1c">Corrected: ${esc(dec.value)}</b>` : `<b style="color:#166534">OK</b>`)
+      : `<span class="seg"><button class="ok ${dec && dec.status === "ok" ? "on" : ""}" data-k="${key}" data-s="ok">OK</button><button class="fix ${dec && dec.status === "corrected" ? "on" : ""}" data-k="${key}" data-s="corrected">Correct</button></span>
+         ${dec && dec.status === "corrected" ? `<input class="fixin" data-k="${key}" placeholder="Correct value" value="${esc(dec.value || "")}">` : ""}`;
+    return `<tr><td><b>${label}</b></td><td>${esc(value(chart, key))}</td>
+      <td class="q">${quote ? "“" + esc(quote) + "”" : "-"}${unverified.has(key) ? '<span class="warn">not found in transcript</span>' : ""}</td><td>${ctl}</td></tr>`;
+  }).join("");
+  const answers = (d.answers || []).map((a) => {
+    const q = (d.questions || []).find((x) => x.id === a.question_id) || { es: a.question_id, en: "" };
+    return `<div class="ans"><div class="qq">${esc(q.es)}</div><div class="qe">${esc(q.en)}</div>
+      <div class="tx">${a.source === "voice" ? "Voice note: " : "Typed: "}${esc(a.text)}</div>
+      ${a.audio_file ? `<audio controls preload="none" src="${API}/api/sessions/${d.id}/audio/${encodeURIComponent(a.audio_file)}"></audio>` : ""}</div>`;
+  }).join("");
+  const conf = d.confirmation;
+  const action = done
+    ? `<div class="confirmed-box">Confirmed by RN · Official ESI ${conf.official_esi}${conf.readback_seconds != null ? ` · read-back ${Math.round(conf.readback_seconds)} s` : ""}</div>`
+    : `<div class="esipick" id="esipick">${[1, 2, 3, 4, 5].map((n) => `<button class="e${n} ${esiChoice === n ? "on" : ""}" data-esi="${n}">ESI ${n}</button>`).join("")}
+         <span class="grow"></span><span class="counts">Read-back <b id="rb">0:00</b></span>
+         <button class="btn primary" id="confirm" ${esiChoice ? "" : "disabled"}>Confirm</button></div>`;
+  const pdfs = `<div class="links"><a class="btn" target="_blank" href="${API}/api/sessions/${d.id}/pdf">Intake sheet (PDF)</a>
+      ${done ? `<a class="btn primary" target="_blank" href="${API}/api/sessions/${d.id}/pdf?kind=confirmed">Confirmed sheet (PDF)</a>` : ""}</div>`;
+
+  box.innerHTML = `
+    <div class="dhead"><h2>Patient ${esc(d.id)}</h2><span class="pill">${pretty(d.status)}</span>
+      <span class="pill">arrived ${d.submitted_at ? clockStr(d.submitted_at) : "-"}</span>
+      <span class="pill">waiting <span id="wait">${mins(d.summary.wait_seconds)}</span></span></div>
+    <div class="banner ${kind}"><b>${esc(r.labels.headline)}</b><ul>${r.labels.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
+    <div class="tier"><div class="esi e${sug}">ESI ${sug}<small>suggested review</small></div><div>${esc(why)}${bars}</div></div>
+    <h3>Read this back to the patient (Spanish)</h3>
+    <div class="readback">${(d.readback_es || []).map(esc).join(" ")}<div class="en">${esc(chart.raw_summary_en || "")}</div></div>
+    <h3>Confirm or correct each line <button class="btn" id="allok" ${done ? "hidden" : ""} style="margin-left:8px">All correct</button></h3>
+    <table><thead><tr><th>Field</th><th>Extracted</th><th>Patient's own words</th><th>RN</th></tr></thead><tbody>${rows}</tbody></table>
+    <h3>Patient's answers</h3><div class="answers">${answers || '<div class="counts">No answers.</div>'}</div>
+    <h3>Official ESI (assigned by the nurse)</h3>${action}${pdfs}
+    <div class="foot">Administrative intake aid. Not a diagnosis. The suggested tier is a safety flag; the RN assigns the ESI. Synthetic demo data.</div>`;
+
+  box.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.k, s = b.dataset.s;
+    decisions[k] = { status: s, value: s === "corrected" ? ((decisions[k] || {}).value || "") : "" };
+    renderDetail();
+  }));
+  box.querySelectorAll(".fixin").forEach((i) => i.addEventListener("input", () => { decisions[i.dataset.k].value = i.value; }));
+  const allok = box.querySelector("#allok");
+  if (allok) allok.addEventListener("click", () => { FIELDS.forEach(([k]) => { decisions[k] = { status: "ok", value: "" }; }); renderDetail(); });
+  box.querySelectorAll("#esipick button[data-esi]").forEach((b) => b.addEventListener("click", () => { esiChoice = +b.dataset.esi; renderDetail(); }));
+  const cbtn = box.querySelector("#confirm");
+  if (cbtn) cbtn.addEventListener("click", confirm);
+  clearInterval(clock);
+  if (!done) clock = setInterval(() => { const s = (Date.now() - openedAt) / 1000; const e = $("#rb"); if (e) e.textContent = `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`; }, 500);
+}
+
+async function confirm() {
+  for (const [k, d] of Object.entries(decisions)) if (d.status === "corrected" && !d.value.trim()) { toast("Type the corrected value first."); return; }
+  try {
+    detail = await api(`/api/sessions/${detail.id}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ official_esi: esiChoice, fields: decisions, readback_seconds: (Date.now() - openedAt) / 1000 }) });
+    clearInterval(clock);
+    renderDetail();
+    loadQueue();
+    toast("Confirmed. The confirmed sheet is ready.");
+  } catch (e) { toast(e.message); }
+}
+
+/* ------------------------------------------------------------------ header actions */
+document.querySelectorAll("[data-demo]").forEach((b) => b.addEventListener("click", async () => {
+  b.disabled = true;
+  try { const d = await api(`/api/demo/${b.dataset.demo}`, { method: "POST" }); toast(`Sample ${b.dataset.demo} sent as patient ${d.id}`); await loadQueue(); }
+  catch (e) { toast(e.message); } finally { b.disabled = false; }
+}));
+$("#qrbtn").addEventListener("click", () => {
+  $("#qrimg").src = `${API}/api/qr.svg?path=/p&t=${Date.now()}`;
+  $("#qrurl").textContent = (API || location.origin) + "/p";
+  $("#modal").classList.add("show");
+});
+$("#qrclose").addEventListener("click", () => $("#modal").classList.remove("show"));
+api("/api/health").then((h) => {
+  const m = $("#mode");
+  m.textContent = h.mode.toUpperCase();
+  m.className = "badge " + (h.mode === "live" ? "b-live" : h.mode === "offline" ? "b-offline" : "b-partly");
+}).catch(() => {});
+loadQueue();
+setInterval(loadQueue, 3000);
+</script>
+</body>
+</html>

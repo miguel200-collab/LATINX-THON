@@ -1,0 +1,38 @@
+{
+  "generated": "2026-10-09 13:46",
+  "machine": "Darwin arm64, Python 3.13.5",
+  "whisper_model": "small",
+  "tests": {
+    "passed": 181,
+    "failed": 0
+  },
+  "asr": [
+    {
+      "case": "A",
+      "audio_seconds": 15.46,
+      "ms": 2614,
+      "wer_pct": 2.3
+    },
+    {
+      "case": "A_long",
+      "audio_seconds": 38.49,
+      "ms": 6096,
+      "wer_pct": 3.5
+    },
+    {
+      "case": "B",
+      "audio_seconds": 11.14,
+      "ms": 2330,
+      "wer_pct": 0.0
+    },
+    {
+      "case": "C",
+      "audio_seconds": 14.63,
+      "ms": 2676,
+      "wer_pct": 6.1
+    }
+  ],
+  "asr_median_ms": 2645,
+  "pipeline_ms_A": 2672,
+  "pipeline_mode": "FIXTURE PROBABILITIES - NOT MODEL OUTPUT"
+}
