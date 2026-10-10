@@ -1,0 +1,35 @@
+{
+  "_comment": "Auto-check values for Gemini output (HACKATHON_TEST_DRIVE.md section 6). duration_hours is [expected, tolerance]. Free-text fields are checked by eye, except forbidden_words, which must not appear in provocation or summary.",
+  "A": {
+    "location": "chest",
+    "quality": "crushing_pressure",
+    "radiation_set": ["left_arm", "jaw"],
+    "severity": 9,
+    "duration_hours": [2.0, 0.5],
+    "red_flags_include": ["chest_pain", "dyspnea", "diaphoresis"]
+  },
+  "A_long": {
+    "location": "chest",
+    "quality": "crushing_pressure",
+    "radiation_set": ["left_arm", "jaw"],
+    "severity": 9,
+    "duration_hours": [2.0, 0.5],
+    "red_flags_include": ["chest_pain", "dyspnea", "diaphoresis", "syncope"],
+    "forbidden_words": ["nieto", "hija", "cocin", "gandules", "pernil", "orlando", "grandson", "daughter", "cook", "rice"]
+  },
+  "B": {
+    "location": "ankle_foot",
+    "quality": "unknown",
+    "radiation_set": ["none"],
+    "severity": 5,
+    "duration_hours": [24.0, 2.0],
+    "red_flags_exact": []
+  },
+  "C": {
+    "location": "upper_abdomen",
+    "quality": "burning",
+    "severity": 6,
+    "duration_hours": [3.0, 0.5],
+    "red_flags_include": ["diaphoresis"]
+  }
+}

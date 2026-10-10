@@ -1,0 +1,21 @@
+{
+  "location": "chest",
+  "onset": "sudden",
+  "provocation": "At rest, sitting, no exertion",
+  "quality": "crushing_pressure",
+  "radiation": ["left_arm", "jaw"],
+  "severity_1_to_10": 9,
+  "timing_duration_hours": 2.0,
+  "red_flag_symptoms": ["chest_pain", "dyspnea", "diaphoresis"],
+  "source_phrases": {
+    "location": "un apretón en el pecho",
+    "onset": "hace como dos horas me dio un apretón en el pecho",
+    "provocation": "Estaba sentada, no hice esfuerzo",
+    "quality": "como si me pusieran una piedra encima",
+    "radiation": "Me corre pa'l brazo izquierdo y la mandíbula",
+    "severity_1_to_10": "Es un nueve de diez",
+    "timing_duration_hours": "hace como dos horas",
+    "red_flag_symptoms": "un apretón en el pecho; Me falta el aire y sudo frío"
+  },
+  "raw_summary_en": "The patient reports a sudden crushing pressure in the chest that began about two hours ago while sitting at rest, spreading to the left arm and jaw. The patient also reports shortness of breath and cold sweats and rates the pain 9 out of 10."
+}

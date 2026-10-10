@@ -1,0 +1,7 @@
+{
+  "_comment": "FIXTURE PROBABILITIES - NOT MODEL OUTPUT. P(ESI 1..5). These are the worked examples from the spec (A = spec sample, B = ankle sprain case, C = ambiguous epigastric case). They are used only when no Jev key is set, and every screen and PDF that uses them says so.",
+  "A": [0.02, 0.18, 0.60, 0.15, 0.05],
+  "A_long": [0.02, 0.18, 0.60, 0.15, 0.05],
+  "B": [0.0, 0.05, 0.0, 0.95, 0.0],
+  "C": [0.0, 0.20, 0.0, 0.80, 0.0]
+}

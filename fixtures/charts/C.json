@@ -1,0 +1,21 @@
+{
+  "location": "upper_abdomen",
+  "onset": "gradual",
+  "provocation": "Began after eating dinner",
+  "quality": "burning",
+  "radiation": ["chest"],
+  "severity_1_to_10": 6,
+  "timing_duration_hours": 3.0,
+  "red_flag_symptoms": ["diaphoresis"],
+  "source_phrases": {
+    "location": "me arde la boca del estómago",
+    "onset": "desde que cené",
+    "provocation": "desde que cené",
+    "quality": "me arde la boca del estómago, como una acidez que no se quita",
+    "radiation": "A veces me sube hacia el pecho",
+    "severity_1_to_10": "Será un seis de diez",
+    "timing_duration_hours": "Hace como tres horas",
+    "red_flag_symptoms": "me da un poco de sudor frío"
+  },
+  "raw_summary_en": "The patient reports burning in the upper abdomen since dinner, about three hours ago, that sometimes rises toward the chest. The patient also mentions occasional cold sweats and rates the discomfort 6 out of 10."
+}

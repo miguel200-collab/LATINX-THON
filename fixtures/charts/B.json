@@ -1,0 +1,21 @@
+{
+  "location": "ankle_foot",
+  "onset": "sudden",
+  "provocation": "Hurts when putting weight on the ankle; twisted it playing soccer",
+  "quality": "unknown",
+  "radiation": ["none"],
+  "severity_1_to_10": 5,
+  "timing_duration_hours": 24.0,
+  "red_flag_symptoms": [],
+  "source_phrases": {
+    "location": "Me torcí el tobillo",
+    "onset": "Me torcí el tobillo jugando fútbol",
+    "provocation": "me duele cuando lo apoyo",
+    "quality": null,
+    "radiation": "No me duele nada más",
+    "severity_1_to_10": "como un cinco de diez",
+    "timing_duration_hours": "hace un día",
+    "red_flag_symptoms": null
+  },
+  "raw_summary_en": "The patient twisted an ankle playing soccer a day ago and reports swelling and pain when putting weight on it, about 5 out of 10. The patient denies other pain, a head injury, or dizziness."
+}
