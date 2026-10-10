@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 
-export default function VoiceNotePlayer({ url, duration, isOwn = false, timestamp }) {
+export default function VoiceNotePlayer({ url, duration, isOwn = false, timestamp, lang = 'es' }) {
   const audioRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -36,6 +36,9 @@ export default function VoiceNotePlayer({ url, duration, isOwn = false, timestam
     return `${m}:${sec.toString().padStart(2, '0')}`
   }
 
+  const playAria = lang === 'es' ? 'Reproducir nota de voz' : 'Play voice note'
+  const pauseAria = lang === 'es' ? 'Pausar' : 'Pause'
+
   // Generate static waveform bars
   const bars = Array.from({ length: 28 }, (_, i) => {
     const seed = (i * 37 + 13) % 100
@@ -48,7 +51,7 @@ export default function VoiceNotePlayer({ url, duration, isOwn = false, timestam
       <button
         className="voice-note__play"
         onClick={toggle}
-        aria-label={isPlaying ? 'Pausar' : 'Reproducir nota de voz'}
+        aria-label={isPlaying ? pauseAria : playAria}
       >
         {isPlaying ? (
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">

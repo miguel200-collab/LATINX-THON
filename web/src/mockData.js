@@ -2,40 +2,73 @@
 // MOCK DATA — SAMPLE VALUES, NOT MODEL OUTPUT
 // This module holds all synthetic data and simulated operations.
 // Replace these functions with API calls to the Python backend later.
+//
+// Bilingual fields (textEn, labelEn, etc.) are UI chrome only.
+// Patient answers (chart.*.words) are NEVER translated — they stay
+// in whatever language the patient typed them.
 // ════════════════════════════════════════════════════════════════
 
 // ── The six intake questions (SPEC section 1) ──
+// `text` = Spanish (patient default), `textEn` = English
 export const INTAKE_QUESTIONS = [
-  { id: 1, text: 'Cuéntenos qué le pasa hoy.' },
-  { id: 2, text: '¿Dónde le duele o le molesta? ¿Se le corre a otra parte?' },
-  { id: 3, text: '¿Cuándo empezó? ¿Fue de repente o poco a poco?' },
-  { id: 4, text: '¿Cómo es la molestia y qué tan fuerte es, del 1 al 10?' },
-  { id: 5, text: '¿Algo lo empeora o lo mejora?' },
-  { id: 6, text: '¿Tiene falta de aire, mareo o desmayo, sudor frío, sangrado, o debilidad en la cara o en un brazo?' },
+  { id: 1, text: 'Cuéntenos qué le pasa hoy.', textEn: 'Tell us what is happening today.' },
+  { id: 2, text: '¿Dónde le duele o le molesta? ¿Se le corre a otra parte?', textEn: 'Where does it hurt or bother you? Does it spread anywhere?' },
+  { id: 3, text: '¿Cuándo empezó? ¿Fue de repente o poco a poco?', textEn: 'When did it start? Was it sudden or gradual?' },
+  { id: 4, text: '¿Cómo es la molestia y qué tan fuerte es, del 1 al 10?', textEn: 'What is the discomfort like and how strong is it, from 1 to 10?' },
+  { id: 5, text: '¿Algo lo empeora o lo mejora?', textEn: 'Does anything make it better or worse?' },
+  { id: 6, text: '¿Tiene falta de aire, mareo o desmayo, sudor frío, sangrado, o debilidad en la cara o en un brazo?', textEn: 'Do you have shortness of breath, dizziness or fainting, cold sweats, bleeding, or weakness in your face or an arm?' },
 ]
 
 // ── Predefined sample answers for the "sample scenario" button ──
 // Question 6 is NEVER auto-covered (SPEC requirement)
+// Bilingual: patient picks the language matching their UI
 export const SAMPLE_ANSWERS = {
-  1: 'Me duele mucho el pecho desde hace como una hora.',
-  2: 'El dolor está en el centro del pecho y se me va al brazo izquierdo.',
-  3: 'Empezó hace como una hora, de repente, mientras estaba descansando.',
-  4: 'Es un dolor como un aplastamiento, muy fuerte, un 9 sobre 10.',
-  5: 'El descanso no lo mejora. Me siento sudoroso y mareado.',
-  // 6 intentionally omitted — never auto-covered
+  es: {
+    1: 'Me duele mucho el pecho desde hace como una hora.',
+    2: 'El dolor está en el centro del pecho y se me va al brazo izquierdo.',
+    3: 'Empezó hace como una hora, de repente, mientras estaba descansando.',
+    4: 'Es un dolor como un aplastamiento, muy fuerte, un 9 sobre 10.',
+    5: 'El descanso no lo mejora. Me siento sudoroso y mareado.',
+    // 6 intentionally omitted — never auto-covered
+  },
+  en: {
+    1: 'I have severe chest pain that started about an hour ago.',
+    2: 'The pain is in the center of my chest and radiates to my left arm.',
+    3: 'It started about an hour ago, suddenly, while I was resting.',
+    4: 'It is a crushing pain, very strong, a 9 out of 10.',
+    5: 'Rest does not help. I feel sweaty and dizzy.',
+    // 6 intentionally omitted — never auto-covered
+  },
 }
 
 // ── Tier color mapping ──
+// `label` = Spanish, `labelEn` = English
 export const TIER_COLORS = {
-  1: { bg: '#d32f2f', text: '#fff', label: 'Nivel 1 — Resucitación', light: '#ffebee' },
-  2: { bg: '#ef6c00', text: '#fff', label: 'Nivel 2 — Emergencia', light: '#fff3e0' },
-  3: { bg: '#f9a825', text: '#000', label: 'Nivel 3 — Urgente', light: '#fffde7' },
-  4: { bg: '#2e7d32', text: '#fff', label: 'Nivel 4 — Menos urgente', light: '#e8f5e9' },
-  5: { bg: '#1565c0', text: '#fff', label: 'Nivel 5 — No urgente', light: '#e3f2fd' },
+  1: { bg: '#d32f2f', text: '#fff', label: 'Nivel 1 — Resucitación', labelEn: 'Level 1 — Resuscitation', light: '#ffebee' },
+  2: { bg: '#ef6c00', text: '#fff', label: 'Nivel 2 — Emergencia', labelEn: 'Level 2 — Emergent', light: '#fff3e0' },
+  3: { bg: '#f9a825', text: '#000', label: 'Nivel 3 — Urgente', labelEn: 'Level 3 — Urgent', light: '#fffde7' },
+  4: { bg: '#2e7d32', text: '#fff', label: 'Nivel 4 — Menos urgente', labelEn: 'Level 4 — Less urgent', light: '#e8f5e9' },
+  5: { bg: '#1565c0', text: '#fff', label: 'Nivel 5 — No urgente', labelEn: 'Level 5 — Non-urgent', light: '#e3f2fd' },
+}
+
+// ── Helper: get tier label for a given language ──
+export function tierLabel(esi, lang) {
+  const tier = TIER_COLORS[esi]
+  if (!tier) return ''
+  return lang === 'es' ? tier.label : tier.labelEn
+}
+
+// ── Helper: get short tier label (after the dash) ──
+export function tierLabelShort(esi, lang) {
+  const label = tierLabel(esi, lang)
+  const parts = label.split(' — ')
+  return parts[1] || label
 }
 
 // ── Synthetic nurse queue cases ──
 // Every case is labeled DEMO / STORED EXAMPLE
+// Patient words (chart.*.words) are always in their original Spanish.
+// englishSummary is always English; spanishReadback is always Spanish.
 export const SAMPLE_QUEUE = [
   {
     id: 'DEMO-001',
@@ -192,14 +225,20 @@ export const SAMPLE_QUEUE = [
 ]
 
 // ── Chart field definitions for the nurse table ──
+// `label` = Spanish, `labelEn` = English
 export const CHART_FIELDS = [
-  { key: 'chiefComplaint', label: 'Motivo principal' },
-  { key: 'location', label: 'Localización' },
-  { key: 'onset', label: 'Inicio' },
-  { key: 'quality', label: 'Calidad / Intensidad' },
-  { key: 'aggravating', label: 'Agravantes / Atenuantes' },
-  { key: 'associated', label: 'Síntomas asociados' },
+  { key: 'chiefComplaint', label: 'Motivo principal', labelEn: 'Chief complaint' },
+  { key: 'location', label: 'Localización', labelEn: 'Location' },
+  { key: 'onset', label: 'Inicio', labelEn: 'Onset' },
+  { key: 'quality', label: 'Calidad / Intensidad', labelEn: 'Quality / Intensity' },
+  { key: 'aggravating', label: 'Agravantes / Atenuantes', labelEn: 'Aggravating / Relieving' },
+  { key: 'associated', label: 'Síntomas asociados', labelEn: 'Associated symptoms' },
 ]
+
+// ── Helper: get chart field label for a given language ──
+export function fieldLabel(field, lang) {
+  return lang === 'es' ? field.label : field.labelEn
+}
 
 // ── Simulated operations (replace with API calls later) ──
 // These return Promises to mimic network latency.
@@ -237,22 +276,51 @@ export function simulateConfirmESI(caseId, esi) {
   })
 }
 
-// ── Simulated error states for preview ──
+// ── Simulated error states for preview (bilingual) ──
+// Keys match the error type strings returned by useVoiceRecorder.
 export const SIMULATED_ERRORS = {
-  permissionDenied: {
-    title: 'Permiso de micrófono denegado',
-    message: 'No se pudo acceder al micrófono. Puede continuar escribiendo sus respuestas.',
+  es: {
+    permissionDenied: {
+      title: 'Permiso de micrófono denegado',
+      message: 'No se pudo acceder al micrófono. Puede continuar escribiendo sus respuestas.',
+    },
+    noMicrophone: {
+      title: 'No se encontró micrófono',
+      message: 'No hay micrófono disponible en este dispositivo. Puede continuar escribiendo.',
+    },
+    unsupported: {
+      title: 'Navegador no compatible',
+      message: 'La grabación de audio no es compatible con este navegador. Puede continuar escribiendo.',
+    },
+    tooShort: {
+      title: 'Nota de voz muy corta',
+      message: 'La grabación duró menos de 0.7s. Intente de nuevo.',
+    },
+    saveError: {
+      title: 'Error de guardado (escenario de demostración)',
+      message: 'No se pudo enviar la respuesta al personal de enfermería. Este es un escenario de demostración.',
+    },
   },
-  noMicrophone: {
-    title: 'No se encontró micrófono',
-    message: 'No hay micrófono disponible en este dispositivo. Puede continuar escribiendo.',
-  },
-  unsupported: {
-    title: 'Navegador no compatible',
-    message: 'La grabación de audio no es compatible con este navegador. Puede continuar escribiendo.',
-  },
-  saveError: {
-    title: 'Error de guardado (escenario de demostración)',
-    message: 'No se pudo enviar la respuesta al personal de enfermería. Este es un escenario de demostración.',
+  en: {
+    permissionDenied: {
+      title: 'Microphone permission denied',
+      message: 'Could not access the microphone. You can continue typing your answers.',
+    },
+    noMicrophone: {
+      title: 'No microphone found',
+      message: 'No microphone available on this device. You can continue typing.',
+    },
+    unsupported: {
+      title: 'Unsupported browser',
+      message: 'Audio recording is not supported in this browser. You can continue typing.',
+    },
+    tooShort: {
+      title: 'Voice note too short',
+      message: 'The recording was shorter than 0.7s. Please try again.',
+    },
+    saveError: {
+      title: 'Save error (demo scenario)',
+      message: 'Could not send the answer to the nursing staff. This is a demo scenario.',
+    },
   },
 }

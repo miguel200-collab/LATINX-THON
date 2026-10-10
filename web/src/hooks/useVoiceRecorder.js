@@ -5,31 +5,19 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 // Supports: hold-to-record, tap-to-record (accessible),
 //           slide-up to lock, slide-left to cancel.
 // Discards recordings shorter than 0.7 seconds.
+//
+// Returns `error` as a STRING type code (e.g. 'permissionDenied').
+// The component looks up the translated title/message via
+// SIMULATED_ERRORS[lang][errorType].
 // ════════════════════════════════════════════════════════════════
 
 const MIN_DURATION = 0.7
 
 const ERROR_TYPES = {
-  permissionDenied: {
-    type: 'permissionDenied',
-    title: 'Permiso de micrófono denegado',
-    message: 'No se pudo acceder al micrófono. Puede continuar escribiendo sus respuestas.',
-  },
-  noMicrophone: {
-    type: 'noMicrophone',
-    title: 'No se encontró micrófono',
-    message: 'No hay micrófono disponible en este dispositivo. Puede continuar escribiendo.',
-  },
-  unsupported: {
-    type: 'unsupported',
-    title: 'Navegador no compatible',
-    message: 'La grabación de audio no es compatible con este navegador. Puede continuar escribiendo.',
-  },
-  tooShort: {
-    type: 'tooShort',
-    title: 'Nota de voz muy corta',
-    message: 'La grabación duró menos de 0.7s. Intente de nuevo.',
-  },
+  permissionDenied: 'permissionDenied',
+  noMicrophone: 'noMicrophone',
+  unsupported: 'unsupported',
+  tooShort: 'tooShort',
 }
 
 export function useVoiceRecorder() {

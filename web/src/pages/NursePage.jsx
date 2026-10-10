@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { sessionStore } from '../mockSessionStore.js'
-import { TIER_COLORS, simulateConfirmESI } from '../mockData.js'
+import { TIER_COLORS, simulateConfirmESI, tierLabel, tierLabelShort } from '../mockData.js'
+import { makeT } from '../i18n.js'
+import LanguageToggle from '../components/LanguageToggle.jsx'
 import ProbabilityBars from '../components/nurse/ProbabilityBars.jsx'
 import FieldTable from '../components/nurse/FieldTable.jsx'
 import { IntakeSheetPreview, ConfirmedSheetPreview } from '../components/nurse/SheetPreview.jsx'
 import VoiceNotePlayer from '../components/patient/VoiceNotePlayer.jsx'
 import '../styles/nurse.css'
 
-export default function NursePage() {
+export default function NursePage({ lang: langProp, setLang: setLangProp }) {
+  // Nurse defaults to English; StaffSignIn passes lang/setLang through.
+  const [internalLang, setInternalLang] = useState('en')
+  const lang = langProp ?? internalLang
+  const setLang = setLangProp ?? setInternalLang
+  const t = makeT(lang, 'nurse')
+
   const [queue, setQueue] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [selectedESI, setSelectedESI] = useState(null)
@@ -110,29 +118,31 @@ export default function NursePage() {
             <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14h-2v-4H6v-2h4V7h2v4h4v2h-4v4z" />
           </svg>
         </div>
-        <div className="nurse-titlebar__title">Estación de enfermería — cola de triage</div>
+        <div className="nurse-titlebar__title">{t('titlebar')}</div>
         <div className="nurse-titlebar__demo">DEMO — SAMPLE DATA</div>
         <div className="nurse-titlebar__controls">
-          <span className="nurse-titlebar__ctrl nurse-titlebar__ctrl--min" title="Minimizar (decorativo)" />
-          <span className="nurse-titlebar__ctrl nurse-titlebar__ctrl--max" title="Maximizar (decorativo)" />
-          <span className="nurse-titlebar__ctrl nurse-titlebar__ctrl--close" title="Cerrar (decorativo)" />
+          <span className="nurse-titlebar__ctrl nurse-titlebar__ctrl--min" title={t('minLabel')} />
+          <span className="nurse-titlebar__ctrl nurse-titlebar__ctrl--max" title={t('maxLabel')} />
+          <span className="nurse-titlebar__ctrl nurse-titlebar__ctrl--close" title={t('closeLabel')} />
         </div>
       </div>
 
       {/* ── Toolbar ── */}
       <div className="nurse-toolbar">
-        <button className="win-btn" onClick={handleResetQueue} title="Restablecer cola de muestra">
-          ↻ Restablecer cola
+        <button className="win-btn" onClick={handleResetQueue} title={t('resetQueue')}>
+          {t('resetQueue')}
         </button>
         <div className="nurse-toolbar__sep" />
-        <button className="win-btn win-btn--preview" onClick={handleSimulateLoading} title="Ver estado de carga">
-          ⟳ Ver: cargando
+        <button className="win-btn win-btn--preview" onClick={handleSimulateLoading} title={t('viewLoading')}>
+          {t('viewLoading')}
         </button>
-        <button className="win-btn win-btn--preview" onClick={handleSimulateError} title="Ver estado de error">
-          ⚠ Ver: error de guardado
+        <button className="win-btn win-btn--preview" onClick={handleSimulateError} title={t('viewError')}>
+          {t('viewError')}
         </button>
         <div className="nurse-toolbar__spacer" />
-        <span className="nurse-toolbar__disclaimer">Administrative intake aid. Not a diagnosis. The RN assigns ESI.</span>
+        <LanguageToggle lang={lang} setLang={setLang} variant="dark" />
+        <div className="nurse-toolbar__sep" />
+        <span className="nurse-toolbar__disclaimer">{t('disclaimer')}</span>
       </div>
 
       {/* ── Main content ── */}
@@ -140,21 +150,21 @@ export default function NursePage() {
         {/* Left pane: patient queue */}
         <div className="nurse-queue">
           <div className="nurse-queue__header">
-            <span>Cola de pacientes ({queue.length})</span>
+            <span>{t('queueHeader')} ({queue.length})</span>
           </div>
           <div className="nurse-queue__list">
             {isLoading && (
               <div className="nurse-loading">
                 <div className="nurse-loading__spinner" />
-                <span>Cargando casos...</span>
+                <span>{t('loadingCases')}</span>
               </div>
             )}
             {!isLoading && queue.length === 0 && (
               <div className="nurse-empty">
                 <div className="nurse-empty__icon">📋</div>
-                <div className="nurse-empty__title">Cola vacía</div>
-                <div className="nurse-empty__msg">No hay pacientes en espera.</div>
-                <button className="win-btn" onClick={handleResetQueue}>Restablecer cola de muestra</button>
+                <div className="nurse-empty__title">{t('queueEmpty')}</div>
+                <div className="nurse-empty__msg">{t('queueEmptyMsg')}</div>
+                <button className="win-btn" onClick={handleResetQueue}>{t('resetQueueBtn')}</button>
               </div>
             )}
             {!isLoading && queue.map((c) => {
@@ -177,7 +187,7 @@ export default function NursePage() {
                     <div className="queue-item__meta">
                       <span className="queue-item__label">{c.label}</span>
                       <span className="queue-item__wait">⏱ {c.waitingMinutes} min</span>
-                      {c.status === 'confirmed' && <span className="queue-item__confirmed">✓ Confirmado</span>}
+                      {c.status === 'confirmed' && <span className="queue-item__confirmed">{t('confirmedTag')}</span>}
                     </div>
                     {c.redFlags.length > 0 && (
                       <div className="queue-item__flags">
@@ -199,8 +209,8 @@ export default function NursePage() {
           {!selectedCase ? (
             <div className="nurse-chart__empty">
               <div className="nurse-empty__icon">🏥</div>
-              <div className="nurse-empty__title">Seleccione un paciente</div>
-              <div className="nurse-empty__msg">Elija un caso de la cola para ver el detalle.</div>
+              <div className="nurse-empty__title">{t('selectPatient')}</div>
+              <div className="nurse-empty__msg">{t('selectPatientMsg')}</div>
             </div>
           ) : (
             <div className="nurse-chart__content">
@@ -209,57 +219,57 @@ export default function NursePage() {
                 <div className="chart-info-bar__left">
                   <span className="chart-info-bar__id">{selectedCase.id}</span>
                   <span className="chart-info-bar__label">{selectedCase.label}</span>
-                  <span className="chart-info-bar__patient">{selectedCase.patient.age} años, {selectedCase.patient.sex}</span>
-                  <span className="chart-info-bar__wait">Espera: {selectedCase.waitingMinutes} min</span>
+                  <span className="chart-info-bar__patient">{selectedCase.patient.age} {t('yearsOld')}, {selectedCase.patient.sex}</span>
+                  <span className="chart-info-bar__wait">{t('waitTime')} {selectedCase.waitingMinutes} min</span>
                 </div>
                 <div className="chart-info-bar__right">
-                  <span className="chart-info-bar__timer-label">Tiempo de revisión:</span>
+                  <span className="chart-info-bar__timer-label">{t('reviewTime')}</span>
                   <span className="chart-info-bar__timer">{formatTime(reviewSeconds)}</span>
                 </div>
               </div>
 
               {/* Suggested tier */}
               <div className="chart-tier-section">
-                <div className="chart-tier-section__label">Tier de revisión sugerido:</div>
+                <div className="chart-tier-section__label">{t('suggestedTier')}</div>
                 <div className="chart-tier-section__badge" style={{ background: TIER_COLORS[selectedCase.suggestedTier].bg, color: TIER_COLORS[selectedCase.suggestedTier].text }}>
-                  Nivel {selectedCase.suggestedTier} — {TIER_COLORS[selectedCase.suggestedTier].label.split(' — ')[1]}
+                  {tierLabel(selectedCase.suggestedTier, lang)}
                 </div>
-                <span className="chart-tier-section__note">Sugerido por el sistema — la enfermera asigna el ESI oficial</span>
+                <span className="chart-tier-section__note">{t('suggestedNote')}</span>
               </div>
 
               {/* Probability bars */}
-              <ProbabilityBars probabilities={selectedCase.probabilities} suggestedTier={selectedCase.suggestedTier} />
+              <ProbabilityBars probabilities={selectedCase.probabilities} suggestedTier={selectedCase.suggestedTier} lang={lang} />
 
               {/* Summaries */}
               <div className="chart-summary-section">
                 <div className="chart-summary-section__header">
-                  <span className="win-groupbox-label">Resúmenes</span>
+                  <span className="win-groupbox-label">{t('summariesHeader')}</span>
                   <span className="chart-summary-section__tag">SAMPLE VALUES — NOT MODEL OUTPUT</span>
                 </div>
                 <div className="chart-summary-section__body">
                   <div className="chart-summary">
-                    <div className="chart-summary__label">English summary:</div>
+                    <div className="chart-summary__label">{t('englishSummaryLabel')}</div>
                     <div className="chart-summary__text">{selectedCase.englishSummary}</div>
                   </div>
                   <div className="chart-summary">
-                    <div className="chart-summary__label">Lectura en español (read-back):</div>
+                    <div className="chart-summary__label">{t('spanishReadbackLabel')}</div>
                     <div className="chart-summary__text">{selectedCase.spanishReadback}</div>
                   </div>
                 </div>
               </div>
 
               {/* Field table */}
-              <FieldTable chart={selectedCase.chart} />
+              <FieldTable chart={selectedCase.chart} lang={lang} />
 
               {/* Audio notes */}
               {audioNotes.length > 0 && (
                 <div className="chart-audio-section">
                   <div className="chart-audio-section__header">
-                    <span className="win-groupbox-label">Notas de voz del paciente</span>
+                    <span className="win-groupbox-label">{t('audioNotes')}</span>
                   </div>
                   <div className="chart-audio-section__body">
                     {audioNotes.map((note, i) => (
-                      <VoiceNotePlayer key={note.id} url={note.url} duration={note.duration} timestamp={`Nota ${i + 1}`} />
+                      <VoiceNotePlayer key={note.id} url={note.url} duration={note.duration} timestamp={`${lang === 'es' ? 'Nota' : 'Note'} ${i + 1}`} lang={lang} />
                     ))}
                   </div>
                 </div>
@@ -268,16 +278,16 @@ export default function NursePage() {
               {/* ESI selection + confirmation */}
               <div className="chart-esi-section">
                 <div className="chart-esi-section__header">
-                  <span className="win-groupbox-label">Asignación de ESI oficial</span>
+                  <span className="win-groupbox-label">{t('esiAssignment')}</span>
                 </div>
                 <div className="chart-esi-section__body">
                   {selectedCase.confirmedESI ? (
                     <div className="chart-confirmed">
                       <div className="chart-confirmed__icon">✓</div>
                       <div className="chart-confirmed__text">
-                        <strong>Demo confirmation</strong>
-                        <div>ESI asignado: <span className="chart-confirmed__esi" style={{ background: TIER_COLORS[selectedCase.confirmedESI].bg, color: TIER_COLORS[selectedCase.confirmedESI].text }}>{selectedCase.confirmedESI}</span></div>
-                        <div>Tiempo de revisión: {formatTime(selectedCase.reviewSeconds || reviewSeconds)}</div>
+                        <strong>{t('demoConfirmation')}</strong>
+                        <div>{t('esiAssigned')} <span className="chart-confirmed__esi" style={{ background: TIER_COLORS[selectedCase.confirmedESI].bg, color: TIER_COLORS[selectedCase.confirmedESI].text }}>{selectedCase.confirmedESI}</span></div>
+                        <div>{t('reviewTime')} {formatTime(selectedCase.reviewSeconds || reviewSeconds)}</div>
                       </div>
                     </div>
                   ) : (
@@ -292,11 +302,11 @@ export default function NursePage() {
                               background: selectedESI === esi ? TIER_COLORS[esi].light : '#fff',
                             }}
                             onClick={() => setSelectedESI(esi)}
-                            aria-label={`Asignar ESI ${esi}`}
+                            aria-label={`${t('confirmEsi')} ${esi}`}
                             aria-pressed={selectedESI === esi}
                           >
                             <span className="esi-btn__num" style={{ background: TIER_COLORS[esi].bg, color: TIER_COLORS[esi].text }}>{esi}</span>
-                            <span className="esi-btn__label">{TIER_COLORS[esi].label.split(' — ')[1]}</span>
+                            <span className="esi-btn__label">{tierLabelShort(esi, lang)}</span>
                           </button>
                         ))}
                       </div>
@@ -305,9 +315,9 @@ export default function NursePage() {
                         disabled={!selectedESI || isConfirming}
                         onClick={handleConfirm}
                       >
-                        {isConfirming ? 'Confirmando...' : selectedESI ? `Confirmar ESI ${selectedESI}` : 'Seleccione un ESI para confirmar'}
+                        {isConfirming ? t('confirming') : selectedESI ? `${t('confirmEsi')} ${selectedESI}` : t('selectEsiPrompt')}
                       </button>
-                      {!selectedESI && <span className="chart-esi-hint">⚠ Debe seleccionar un ESI antes de confirmar</span>}
+                      {!selectedESI && <span className="chart-esi-hint">{t('mustSelectEsi')}</span>}
                     </>
                   )}
                 </div>
@@ -318,8 +328,8 @@ export default function NursePage() {
                 <div className="chart-save-error">
                   <div className="chart-save-error__icon">⚠</div>
                   <div>
-                    <strong>Error de guardado (escenario de demostración)</strong>
-                    <div>No se pudo guardar la confirmación. Este es un escenario de demostración.</div>
+                    <strong>{t('saveErrorTitle')}</strong>
+                    <div>{t('saveErrorMsg')}</div>
                   </div>
                   <button className="chart-save-error__close" onClick={() => setShowSaveError(false)}>×</button>
                 </div>
@@ -328,12 +338,12 @@ export default function NursePage() {
               {/* Sheet previews */}
               <div className="chart-sheets-section">
                 <button className="win-btn win-btn--toggle" onClick={() => setShowSheets(!showSheets)}>
-                  {showSheets ? '▼' : '▶'} Vista previa de hojas
+                  {showSheets ? '▼' : '▶'} {t('sheetsToggle')}
                 </button>
                 {showSheets && (
                   <div className="chart-sheets-grid">
-                    <IntakeSheetPreview caseData={selectedCase} />
-                    {selectedCase.confirmedESI && <ConfirmedSheetPreview caseData={selectedCase} />}
+                    <IntakeSheetPreview caseData={selectedCase} lang={lang} />
+                    {selectedCase.confirmedESI && <ConfirmedSheetPreview caseData={selectedCase} lang={lang} />}
                   </div>
                 )}
               </div>
@@ -345,11 +355,11 @@ export default function NursePage() {
       {/* ── Status bar ── */}
       <div className="nurse-statusbar">
         <span className="nurse-statusbar__item">
-          {queue.length} paciente(s) en cola
+          {queue.length} {t('statusQueue')}
         </span>
         <span className="nurse-statusbar__sep" />
         <span className="nurse-statusbar__item">
-          {queue.filter((c) => c.status === 'confirmed').length} confirmado(s)
+          {queue.filter((c) => c.status === 'confirmed').length} {t('statusConfirmed')}
         </span>
         <span className="nurse-statusbar__sep" />
         <span className="nurse-statusbar__item nurse-statusbar__item--warn">
@@ -357,7 +367,7 @@ export default function NursePage() {
         </span>
         <span className="nurse-statusbar__spacer" />
         <span className="nurse-statusbar__item nurse-statusbar__item--disclaimer">
-          Administrative intake aid. Not a diagnosis. The RN assigns ESI.
+          {t('disclaimer')}
         </span>
       </div>
     </div>
