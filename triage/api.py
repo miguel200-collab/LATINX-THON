@@ -115,10 +115,27 @@ async def api_intake(request: Request):
         body = await request.json()
     except Exception:
         body = {}
+    # Return a case the nurse workstation can render: merge the submitted
+    # patient data (chart, suggestedTier, redFlags, summaries) with the
+    # queue-level fields the frontend expects at the top level.
     return {
+        **body,
         "id": f"case-{int(time.time()*1000)}",
         "status": "waiting",
-        "patient": body,
+        "label": "NEW",
+        "waitingMinutes": 0,
+        "patient": body.get("patient") or {"age": None, "sex": ""},
+        "probabilities": body.get("probabilities") or [
+            {"esi": 1, "probability": 0.1, "expectedLoss": 1.0},
+            {"esi": 2, "probability": 0.2, "expectedLoss": 2.0},
+            {"esi": 3, "probability": 0.4, "expectedLoss": 4.0},
+            {"esi": 4, "probability": 0.2, "expectedLoss": 2.0},
+            {"esi": 5, "probability": 0.1, "expectedLoss": 1.0},
+        ],
+        "audioNoteIds": [],
+        "confirmedESI": None,
+        "confirmedAt": None,
+        "reviewSeconds": None,
         "created_at": time.time(),
     }
 
