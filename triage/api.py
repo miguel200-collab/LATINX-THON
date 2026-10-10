@@ -93,6 +93,45 @@ def nurse_page():
     return _page("nurse.html")
 
 
+@app.get("/app", include_in_schema=False)
+@app.get("/react", include_in_schema=False)
+def react_app():
+    dist_index = WEB / "dist" / "index.html"
+    if dist_index.exists():
+        return FileResponse(dist_index, media_type="text/html", headers={"Cache-Control": "no-store"})
+    return _page("patient.html")
+
+
+DIST_ASSETS = WEB / "dist" / "assets"
+if DIST_ASSETS.exists():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/assets", StaticFiles(directory=DIST_ASSETS), name="assets")
+
+
+# ----------------------------------------------------------------------------- Base44 helpers
+@app.post("/api/intake")
+async def api_intake(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    return {
+        "id": f"case-{int(time.time()*1000)}",
+        "status": "waiting",
+        "patient": body,
+        "created_at": time.time(),
+    }
+
+
+@app.post("/api/confirm-esi")
+async def api_confirm_esi(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    return {"ok": True, "status": "confirmed", **body}
+
+
 # ----------------------------------------------------------------------------- general
 @app.get("/api/health")
 def health():
