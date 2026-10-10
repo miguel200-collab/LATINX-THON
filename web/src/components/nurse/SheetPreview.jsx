@@ -10,7 +10,7 @@ import { makeT } from '../../i18n.js'
 
 export function IntakeSheetPreview({ caseData, lang = 'en' }) {
   const t = makeT(lang, 'nurse')
-  const colors = TIER_COLORS[caseData.suggestedTier]
+  const colors = TIER_COLORS[caseData.suggestedTier] || { bg: '#9e9e9e', text: '#fff' }
   return (
     <div className="sheet-preview">
       <div className="sheet-preview__header">
@@ -24,12 +24,12 @@ export function IntakeSheetPreview({ caseData, lang = 'en' }) {
         </div>
         <div className="sheet-preview__row">
           <span className="sheet-preview__label">{t('sheetPatient')}</span>
-          <span className="sheet-preview__value">{caseData.patient.age} {t('yearsOld')}, {caseData.patient.sex}</span>
+          <span className="sheet-preview__value">{caseData.patient.age != null ? `${caseData.patient.age} ${t('yearsOld')}, ${caseData.patient.sex}` : '—'}</span>
         </div>
         <div className="sheet-preview__row">
           <span className="sheet-preview__label">{t('sheetSuggestedTier')}</span>
           <span className="sheet-preview__tier" style={{ background: colors.bg, color: colors.text }}>
-            {caseData.suggestedTier}
+            {caseData.suggestedTier || '—'}
           </span>
         </div>
         <div className="sheet-preview__divider" />

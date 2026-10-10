@@ -169,7 +169,7 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
               </div>
             )}
             {!isLoading && queue.map((c) => {
-              const colors = TIER_COLORS[c.suggestedTier]
+              const colors = TIER_COLORS[c.suggestedTier] || { bg: '#9e9e9e', text: '#fff' }
               const isSelected = c.id === selectedId
               return (
                 <div
@@ -181,7 +181,7 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSelectCase(c.id) }}
                 >
                   <div className="queue-item__tier" style={{ background: colors.bg, color: colors.text }}>
-                    {c.suggestedTier}
+                    {c.suggestedTier || '—'}
                   </div>
                   <div className="queue-item__body">
                     <div className="queue-item__id">{c.id}</div>
@@ -220,7 +220,11 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
                 <div className="chart-info-bar__left">
                   <span className="chart-info-bar__id">{selectedCase.id}</span>
                   <span className="chart-info-bar__label">{selectedCase.label}</span>
-                  <span className="chart-info-bar__patient">{selectedCase.patient.age} {t('yearsOld')}, {selectedCase.patient.sex}</span>
+                  <span className="chart-info-bar__patient">
+                    {selectedCase.patient.age != null
+                      ? `${selectedCase.patient.age} ${t('yearsOld')}, ${selectedCase.patient.sex}`
+                      : (lang === 'es' ? 'Edad no proporcionada' : 'Age not provided')}
+                  </span>
                   <span className="chart-info-bar__wait">{t('waitTime')} {selectedCase.waitingMinutes} min</span>
                 </div>
                 <div className="chart-info-bar__right">
@@ -232,10 +236,21 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
               {/* Suggested tier */}
               <div className="chart-tier-section">
                 <div className="chart-tier-section__label">{t('suggestedTier')}</div>
-                <div className="chart-tier-section__badge" style={{ background: TIER_COLORS[selectedCase.suggestedTier].bg, color: TIER_COLORS[selectedCase.suggestedTier].text }}>
-                  {tierLabel(selectedCase.suggestedTier, lang)}
-                </div>
-                <span className="chart-tier-section__note">{t('suggestedNote')}</span>
+                {selectedCase.suggestedTier ? (
+                  <>
+                    <div className="chart-tier-section__badge" style={{ background: TIER_COLORS[selectedCase.suggestedTier].bg, color: TIER_COLORS[selectedCase.suggestedTier].text }}>
+                      {tierLabel(selectedCase.suggestedTier, lang)}
+                    </div>
+                    <span className="chart-tier-section__note">{t('suggestedNote')}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="chart-tier-section__badge" style={{ background: '#9e9e9e', color: '#fff' }}>
+                      {lang === 'es' ? 'Pendiente' : 'Pending'}
+                    </div>
+                    <span className="chart-tier-section__note">{lang === 'es' ? 'Sin puntuación de IA — la enfermera asigna el ESI' : 'No AI score — nurse assigns ESI'}</span>
+                  </>
+                )}
               </div>
 
               {/* Probability bars */}
@@ -250,11 +265,11 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
                 <div className="chart-summary-section__body">
                   <div className="chart-summary">
                     <div className="chart-summary__label">{t('englishSummaryLabel')}</div>
-                    <div className="chart-summary__text">{selectedCase.englishSummary}</div>
+                    <div className="chart-summary__text">{selectedCase.englishSummary || (lang === 'es' ? 'Pendiente — IA no conectada' : 'Pending — AI not connected')}</div>
                   </div>
                   <div className="chart-summary">
                     <div className="chart-summary__label">{t('spanishReadbackLabel')}</div>
-                    <div className="chart-summary__text">{selectedCase.spanishReadback}</div>
+                    <div className="chart-summary__text">{selectedCase.spanishReadback || (lang === 'es' ? 'Pendiente — IA no conectada' : 'Pending — AI not connected')}</div>
                   </div>
                 </div>
               </div>

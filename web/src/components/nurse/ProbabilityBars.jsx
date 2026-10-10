@@ -17,6 +17,11 @@ export default function ProbabilityBars({ probabilities, suggestedTier, lang = '
         <span className="prob-section__sample-tag">SAMPLE VALUES — NOT MODEL OUTPUT</span>
       </div>
       <div className="prob-section__body">
+        {probabilities.length === 0 ? (
+          <p className="prob-section__pending">
+            {lang === 'es' ? 'Pendiente — IA no conectada' : 'Pending — AI not connected'}
+          </p>
+        ) : (
         <table className="prob-table">
           <thead>
             <tr>
@@ -49,6 +54,7 @@ export default function ProbabilityBars({ probabilities, suggestedTier, lang = '
             })}
           </tbody>
         </table>
+        )}
       </div>
     </div>
   )
