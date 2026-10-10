@@ -79,7 +79,8 @@ def _page(name: str) -> FileResponse:
 
 @app.get("/", include_in_schema=False)
 def judge_page():
-    return _page("index.html")
+    target = "judge.html" if (WEB / "judge.html").exists() else "index.html"
+    return _page(target)
 
 
 @app.get("/p", include_in_schema=False)

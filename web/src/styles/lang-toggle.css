@@ -1,0 +1,62 @@
+/* ═══ Language toggle ═══ */
+
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lang-toggle__btn {
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.lang-toggle__sep {
+  opacity: 0.5;
+  user-select: none;
+}
+
+/* Light variant: light text on dark backgrounds (WhatsApp header, nurse titlebar) */
+.lang-toggle--light .lang-toggle__btn {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.lang-toggle--light .lang-toggle__btn--active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lang-toggle--light .lang-toggle__btn:hover:not(.lang-toggle__btn--active) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.lang-toggle--light .lang-toggle__sep {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Dark variant: dark text on light backgrounds (staff sign-in, QR panel, nurse toolbar) */
+.lang-toggle--dark .lang-toggle__btn {
+  color: #888;
+}
+
+.lang-toggle--dark .lang-toggle__btn--active {
+  color: #1a3a6b;
+  background: #d4e0f4;
+}
+
+.lang-toggle--dark .lang-toggle__btn:hover:not(.lang-toggle--dark .lang-toggle__btn--active) {
+  color: #555;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.lang-toggle--dark .lang-toggle__sep {
+  color: #ccc;
+}

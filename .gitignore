@@ -9,6 +9,10 @@ output/
 .DS_Store
 .vscode/
 
+# Frontend
+web/node_modules/
+web/dist/
+
 # Hidden prompt, spec, and planning files
 Archive/
 Archive.zip

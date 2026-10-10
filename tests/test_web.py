@@ -28,6 +28,7 @@ def test_nurse_page_has_the_official_esi_and_both_pdfs():
 
 
 def test_judge_page_shows_both_sides():
-    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    path = ROOT / "web" / "judge.html" if (ROOT / "web" / "judge.html").exists() else ROOT / "web" / "index.html"
+    html = path.read_text(encoding="utf-8")
     assert 'src="/p?new=1"' in html and 'src="/nurse?embed=1"' in html and 'allow="microphone' in html
     assert "/api/benchmarks" in html and "/api/demo/" in html

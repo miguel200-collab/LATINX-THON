@@ -1,0 +1,6 @@
+/* ═══ App root — no preview nav bar; routes are separate ═══ */
+
+.app-root {
+  height: 100%;
+  width: 100%;
+}
