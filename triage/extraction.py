@@ -123,15 +123,28 @@ def _gemini_call(transcript: str, settings: Settings, extra: str = "") -> str:
     if settings.gemini_thinking_level:
         config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=settings.gemini_thinking_level)
     contents = transcript if not extra else f"{transcript}\n\n{extra}"
-    response = client.models.generate_content(
-        model=settings.gemini_model,
-        contents=contents,
-        config=types.GenerateContentConfig(**config_kwargs),
-    )
-    text = response.text
-    if not text or not text.strip():
-        raise ExtractionError("Gemini returned an empty response")
-    return text
+    models_to_try = [settings.gemini_model]
+    if settings.gemini_model != "gemini-2.5-flash":
+        models_to_try.append("gemini-2.5-flash")
+
+    last_exc = None
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(**config_kwargs),
+            )
+            text = response.text
+            if text and text.strip():
+                return text
+        except Exception as exc:
+            last_exc = exc
+            continue
+
+    if last_exc:
+        raise last_exc
+    raise ExtractionError("Gemini returned an empty response")
 
 
 def parse_json_text(text: str) -> dict:

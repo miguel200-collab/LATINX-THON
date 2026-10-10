@@ -77,7 +77,7 @@ def transcribe(
     audio_path: str | Path,
     *,
     model_size: Optional[str] = None,
-    language: str = "es",
+    language: Optional[str] = None,
     initial_prompt: Optional[str] = INITIAL_PROMPT,
 ) -> AsrOutcome:
     path = Path(audio_path)

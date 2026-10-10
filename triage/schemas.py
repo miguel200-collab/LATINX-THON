@@ -118,5 +118,5 @@ class TriageFlag(BaseModel):
     expected_losses: Optional[list[float]] = None
     override_triggered: bool = False
     jev_confidence: Optional[float] = None
-    source: Literal["jev", "fixture", "regex_hold"]
+    source: Literal["jev", "fixture", "regex_hold", "gemini_acuity"]
     latency_ms: dict[str, float] = Field(default_factory=dict)

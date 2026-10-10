@@ -73,7 +73,7 @@ def get_settings() -> Settings:
         jev_model=os.getenv("JEV_MODEL", "").strip() or "jev-latest",
         whisper_model=os.getenv("WHISPER_MODEL", "").strip() or "small",
         gemini_thinking_level=(os.getenv("GEMINI_THINKING_LEVEL", "").strip().upper() or None),
-        gemini_timeout_s=_float("GEMINI_TIMEOUT_S", 8.0),
+        gemini_timeout_s=_float("GEMINI_TIMEOUT_S", 15.0),
         jev_timeout_s=_float("JEV_TIMEOUT_S", 5.0),
         c_under=_float("C_UNDER", 10.0),
         c_over=_float("C_OVER", 1.0),

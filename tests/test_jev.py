@@ -216,3 +216,45 @@ def test_sanity_runner_catches_a_model_that_cannot_tell_cases_apart(live, monkey
     monkeypatch.setattr(jev, "_jev_call", lambda state, s, order="forward": fake_answer([0.1, 0.1, 0.6, 0.1, 0.1]))
     result = jev.run_sanity(("A", "B"), repeats=1)
     assert not result["checks"][0]["passed"]
+
+
+def test_gemini_acuity_fallback_when_jev_unready(monkeypatch):
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    monkeypatch.setattr(
+        jev,
+        "_gemini_acuity_call",
+        lambda state, s, order="forward": {
+            "choice": "esi_4",
+            "confidence": 0.85,
+            "probabilities": {"esi_1": 0.0, "esi_2": 0.05, "esi_3": 0.1, "esi_4": 0.8, "esi_5": 0.05},
+            "model": "gemini-3.8-flash",
+        },
+    )
+    chart = fx.load_chart("B")
+    out = jev.score(chart)
+    assert out.source == "gemini_acuity"
+    assert out.probabilities == [0.0, 0.05, 0.1, 0.8, 0.05]
+    assert out.choice == "esi_4"
+    assert out.confidence == 0.85
+    assert out.model == "gemini-3.8-flash"
+
+
+def test_gemini_acuity_fallback_when_jev_fails(live, monkeypatch):
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    monkeypatch.setattr(jev, "_jev_call", lambda s, st, o="forward": (_ for _ in ()).throw(RuntimeError("401 Unauthorized")))
+    monkeypatch.setattr(
+        jev,
+        "_gemini_acuity_call",
+        lambda state, s, order="forward": {
+            "choice": "esi_2",
+            "confidence": 0.9,
+            "probabilities": {"esi_1": 0.05, "esi_2": 0.9, "esi_3": 0.05, "esi_4": 0.0, "esi_5": 0.0},
+            "model": "gemini-3.8-flash",
+        },
+    )
+    chart = fx.load_chart("A")
+    out = jev.score(chart)
+    assert out.source == "gemini_acuity"
+    assert out.probabilities == [0.05, 0.9, 0.05, 0.0, 0.0]
+    assert "Jev call failed" in out.note
+

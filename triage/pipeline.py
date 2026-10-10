@@ -112,6 +112,8 @@ def _labels(
 
     if scoring.source == "jev":
         sco = f"Scoring: {scoring.model} (live, prompt {scoring.prompt_version}, options {scoring.option_order})"
+    elif scoring.source == "gemini_acuity":
+        sco = f"Scoring: {scoring.model} (live acuity via Gemini, options {scoring.option_order})"
     elif scoring.source == "fixture_probs":
         sco = "Scoring: stored fixture probabilities (not model output)"
     else:
@@ -202,7 +204,7 @@ def run_pipeline(
             expected_losses=d["expected_losses"],
             override_triggered=d["override_triggered"],
             jev_confidence=scoring.confidence,
-            source="jev" if scoring.source == "jev" else "fixture",
+            source="jev" if scoring.source == "jev" else ("gemini_acuity" if scoring.source == "gemini_acuity" else "fixture"),
         )
     else:
         flag = TriageFlag(suggested_review_tier=2, source="regex_hold")

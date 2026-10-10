@@ -12,6 +12,7 @@ Sources, always labeled downstream:
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Optional
 
@@ -114,6 +115,80 @@ def score_live(chart: ExtractionResult, settings: Optional[Settings] = None, ord
     )
 
 
+def _gemini_acuity_call(state: dict, settings: Settings, order: str = "forward") -> dict:
+    """One call to Gemini evaluating acuity. Returns plain data."""
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=settings.google_api_key)
+    ordered_keys = _ordered_keys(order)
+    criteria_text = "\n".join(f"- {k}: {JEV_CRITERIA[k]}" for k in ordered_keys)
+    prompt = (
+        f"You are an emergency severity assessment engine.\n"
+        f"{JEV_INSTRUCTIONS}\n\n"
+        f"Criteria:\n{criteria_text}\n\n"
+        f"Patient Structured Symptoms:\n{json.dumps(state, indent=2)}\n\n"
+        f"Assign a probability distribution over the five ESI levels (esi_1, esi_2, esi_3, esi_4, esi_5).\n"
+        f"The probabilities must be non-negative numbers that sum to 1.0.\n"
+        f"Also pick the single best choice (one of esi_1 .. esi_5) and give your confidence (0.0 to 1.0).\n\n"
+        f"Return JSON ONLY with keys 'choice', 'confidence', 'probabilities' (mapping esi_1..esi_5 to floats)."
+    )
+
+    models_to_try = [settings.gemini_model]
+    if settings.gemini_model != "gemini-2.5-flash":
+        models_to_try.append("gemini-2.5-flash")
+
+    last_exc = None
+    for model_name in models_to_try:
+        try:
+            resp = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                ),
+            )
+            raw = json.loads(resp.text)
+            return {
+                "choice": raw.get("choice"),
+                "confidence": float(raw.get("confidence", 0.8)),
+                "probabilities": dict(raw["probabilities"]),
+                "model": model_name,
+            }
+        except Exception as exc:
+            last_exc = exc
+            continue
+
+    if last_exc:
+        raise last_exc
+    raise JevError("Gemini acuity call returned no response")
+
+
+def score_with_gemini(
+    chart: ExtractionResult,
+    settings: Optional[Settings] = None,
+    order: str = "forward",
+) -> JevOutcome:
+    """Score acuity with Gemini when TypeSafe Jev is unavailable."""
+    settings = settings or get_settings()
+    if not settings.gemini_live_ready:
+        raise JevError("GOOGLE_API_KEY is not set (or offline mode is on)")
+    start = now()
+    raw = call_with_timeout(_gemini_acuity_call, settings.gemini_timeout_s + 1.0, chart.jev_state(), settings, order)
+    vector = probability_vector(raw["probabilities"])
+    return JevOutcome(
+        probabilities=vector,
+        confidence=float(raw["confidence"]) if raw.get("confidence") is not None else None,
+        choice=raw.get("choice"),
+        source="gemini_acuity",
+        latency_ms=elapsed_ms(start),
+        model=raw.get("model", settings.gemini_model),
+        prompt_version="RP-G1-acuity v1",
+        option_order=order,
+    )
+
+
 def score(
     chart: ExtractionResult,
     *,
@@ -123,8 +198,9 @@ def score(
 ) -> JevOutcome:
     """Probabilities for this chart.
 
-    mode "auto":    live Jev if a key is set; otherwise (or if the call fails) the stored fixture
-                    vector when the case is a known fixture, otherwise the safety hold.
+    mode "auto":    live Jev if a key is set; otherwise Gemini acuity if available;
+                    otherwise (or if calls fail) the stored fixture vector when known,
+                    otherwise the safety hold.
     mode "offline": never call the API.
     mode "outage":  simulate an outage: always the safety hold (no probabilities).
     """
@@ -154,6 +230,16 @@ def score(
         note = "Offline mode: no API call was made."
     else:
         note = "No TYPESAFE_API_KEY set: no API call was made."
+
+    if mode == "auto" and settings.gemini_live_ready and not fixture_id:
+        try:
+            outcome = score_with_gemini(chart, settings, order)
+            if note:
+                outcome.note = f"{note}; fallback to live Gemini acuity scoring"
+            return outcome
+        except Exception as exc:
+            gem_err = f"Gemini acuity call failed ({type(exc).__name__}): {str(exc)[:150]}"
+            note = f"{note}; {gem_err}" if note else gem_err
 
     if fixture_id:
         return JevOutcome(
