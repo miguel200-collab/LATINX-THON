@@ -35,7 +35,11 @@ export default function PatientPage() {
   const [showPermissionError, setShowPermissionError] = useState(false)
   const [backendLive, setBackendLive] = useState(false)
   const backendSessionIdRef = useRef(null)
+  const [submissionStatus, setSubmissionStatus] = useState('idle')
+  const [answers, setAnswers] = useState({})
   const messagesEndRef = useRef(null)
+  const answersRef = useRef({})
+  const submittedRef = useRef(false)
   const holdTimerRef = useRef(null)
   const holdStartedRef = useRef(false)
   const pointerStartRef = useRef({ x: 0, y: 0 })
@@ -73,6 +77,10 @@ export default function PatientPage() {
     }])
     setAnswered([false, false, false, false, false, false])
     setShowSaveError(false)
+    answersRef.current = {}
+    setAnswers({})
+    submittedRef.current = false
+    setSubmissionStatus('idle')
     setCurrentQ(0)
 
     // Create live backend session if connected
@@ -84,14 +92,42 @@ export default function PatientPage() {
     }
   }, [lang])
 
+  // ── Submit the complete intake to the nurse queue ──
+  const submitIntake = useCallback(async () => {
+    if (submittedRef.current) return
+    submittedRef.current = true
+    setSubmissionStatus('submitting')
+    setMessages((prev) => [...prev, {
+      id: nextId(), type: 'submitting', timestamp: formatTimestamp(),
+    }])
+    try {
+      const patientData = buildFullPatientData(answersRef.current)
+      const newCase = await sendToNurse(patientData)
+      sessionStore.addCase(newCase)
+      setSubmissionStatus('success')
+      setMessages((prev) => [...prev, {
+        id: nextId(), type: 'completion', timestamp: formatTimestamp(),
+      }])
+    } catch (e) {
+      submittedRef.current = false
+      setSubmissionStatus('error')
+      setMessages((prev) => [...prev, {
+        id: nextId(), type: 'submission_error', timestamp: formatTimestamp(),
+      }])
+    }
+  }, [])
+
+  const retrySubmission = useCallback(() => {
+    setMessages((prev) => prev.filter((m) => m.type !== 'submission_error' && m.type !== 'submitting'))
+    submitIntake()
+  }, [submitIntake])
+
   // ── Advance to next question ──
   const advanceToNext = useCallback((qIndex) => {
     const nextIndex = qIndex + 1
     if (nextIndex >= 6) {
       setCurrentQ(6)
-      setMessages((prev) => [...prev, {
-        id: nextId(), type: 'completion', timestamp: formatTimestamp(),
-      }])
+      submitIntake()
       return
     }
     setCurrentQ(nextIndex)
@@ -99,7 +135,7 @@ export default function PatientPage() {
       id: nextId(), type: 'question', questionId: nextIndex + 1,
       text: qText(nextIndex), timestamp: formatTimestamp(),
     }])
-  }, [lang])
+  }, [lang, submitIntake])
 
   // ── Submit an answer ──
   const submitAnswer = useCallback(async (text, audioNote = null) => {
@@ -113,6 +149,10 @@ export default function PatientPage() {
     }])
     setInputText('')
     setIsSending(true)
+
+    // Store answer locally
+    answersRef.current = { ...answersRef.current, [qIndex + 1]: text || (lang === 'es' ? 'Nota de voz' : 'Voice note') }
+    setAnswers(answersRef.current)
 
     // Send answer to live backend if available
     let sid = backendSessionIdRef.current
@@ -135,21 +175,14 @@ export default function PatientPage() {
           await apiSubmitAnswer(sid, qid, { text })
         }
 
-        // On the final question (qIndex === 5), trigger full pipeline submission
+        // On the final question, submit to run full AI pipeline
         if (qIndex === 5) {
-          await apiSubmitSession(sid)
+          apiSubmitSession(sid).catch(() => {})
         }
       } catch (e) {
-        // Fallback to local sessionStore
+        // Fallback silently to local sessionStore
       }
     }
-
-    // Always maintain local mock sessionStore fallback
-    try {
-      const patientData = buildPatientData(messages, text, qIndex)
-      const newCase = await sendToNurse(patientData)
-      sessionStore.addCase(newCase)
-    } catch (e) { /* demo fallback */ }
 
     await new Promise((r) => setTimeout(r, 600))
     setIsSending(false)
@@ -160,7 +193,7 @@ export default function PatientPage() {
     }])
 
     advanceToNext(qIndex)
-  }, [currentQ, isSending, messages, advanceToNext])
+  }, [currentQ, isSending, advanceToNext, lang])
 
   // ── Sample scenario: auto-cover Q1-Q5, require Q6 ──
   const startSampleScenario = useCallback(async () => {
@@ -182,6 +215,13 @@ export default function PatientPage() {
     setAnswered([true, true, true, true, true, false])
     setCurrentQ(5)
 
+    const sampleAnswers = {}
+    for (let i = 1; i <= 5; i++) sampleAnswers[i] = sampleAns[i]
+    answersRef.current = sampleAnswers
+    setAnswers(sampleAnswers)
+    submittedRef.current = false
+    setSubmissionStatus('idle')
+
     // Also populate live backend demo if possible
     try {
       const sess = await createSession()
@@ -192,9 +232,6 @@ export default function PatientPage() {
         }
       }
     } catch (e) { /* fallback */ }
-
-    // Send scenario patient to nurse queue
-    sendToNurse(buildScenarioData(lang)).then((c) => sessionStore.addCase(c))
   }, [lang, sampleAns, qText])
 
 
@@ -268,7 +305,7 @@ export default function PatientPage() {
   }, [startIntake])
 
   const isIntro = currentQ === -1
-  const isDone = currentQ === 6
+  const isDone = currentQ === 6 && submissionStatus === 'success'
   const canInput = currentQ >= 0 && currentQ < 6 && !isSending
 
   return (
@@ -373,6 +410,28 @@ export default function PatientPage() {
                   </svg>
                 </div>
                 <span>{t('answerRegistered')}</span>
+              </div>
+            )
+          }
+          if (msg.type === 'submitting') {
+            return (
+              <div key={msg.id} className="chat-sending">
+                <div className="chat-sending__dots"><span></span><span></span><span></span></div>
+                <span>{t('submittingIntake')}</span>
+              </div>
+            )
+          }
+          if (msg.type === 'submission_error') {
+            return (
+              <div key={msg.id} className="chat-error-preview">
+                <div className="chat-error-preview__icon">⚠</div>
+                <div>
+                  <div className="chat-error-preview__title">{t('submissionErrorTitle')}</div>
+                  <div className="chat-error-preview__msg">{t('submissionErrorMsg')}</div>
+                </div>
+                <button className="chat-error-preview__retry" onClick={retrySubmission}>
+                  {t('retryBtn')}
+                </button>
               </div>
             )
           }
@@ -519,37 +578,22 @@ export default function PatientPage() {
 }
 
 // ── Helpers ──
-function buildPatientData(existingMessages, text, qIndex) {
-  return {
-    chart: {
-      chiefComplaint: { extracted: qIndex === 0 ? text : '', words: qIndex === 0 ? text : '' },
-      location: { extracted: qIndex === 1 ? text : '', words: qIndex === 1 ? text : '' },
-      onset: { extracted: qIndex === 2 ? text : '', words: qIndex === 2 ? text : '' },
-      quality: { extracted: qIndex === 3 ? text : '', words: qIndex === 3 ? text : '' },
-      aggravating: { extracted: qIndex === 4 ? text : '', words: qIndex === 4 ? text : '' },
-      associated: { extracted: qIndex === 5 ? text : '', words: qIndex === 5 ? text : '' },
-    },
-    suggestedTier: 3,
-    redFlags: [],
-    englishSummary: 'Sample summary — not model output.',
-    spanishReadback: 'Resumen de muestra — no es salida del modelo.',
+// Build a complete patient data object from all collected answers.
+// No AI extraction — the patient's words are used as-is for both
+// the extracted value and the patient's words field.
+function buildFullPatientData(answers) {
+  const fieldMap = {
+    1: 'chiefComplaint',
+    2: 'location',
+    3: 'onset',
+    4: 'quality',
+    5: 'aggravating',
+    6: 'associated',
   }
-}
-
-function buildScenarioData(lang) {
-  const ans = SAMPLE_ANSWERS[lang]
-  return {
-    chart: {
-      chiefComplaint: { extracted: 'Dolor torácico opresivo severo', words: ans[1] },
-      location: { extracted: 'Centro de pecho, irradiación a brazo izquierdo', words: ans[2] },
-      onset: { extracted: 'Inicio súbito hace ~1 hora, en reposo', words: ans[3] },
-      quality: { extracted: 'Opresivo, intensidad 9/10', words: ans[4] },
-      aggravating: { extracted: 'No mejora con el reposo', words: ans[5] },
-      associated: { extracted: 'Pendiente — pregunta 6 no respondida', words: '' },
-    },
-    suggestedTier: 2,
-    redFlags: ['Dolor torácico opresivo', 'Irradiación a brazo izq.'],
-    englishSummary: 'Sample scenario — not model output. Chest pain with radiation, pending red-flag question.',
-    spanishReadback: 'Escenario de muestra — no es salida del modelo. Dolor torácico con irradiación, pregunta de banderas rojas pendiente.',
+  const chart = {}
+  for (const [qId, field] of Object.entries(fieldMap)) {
+    const words = answers[qId] || ''
+    chart[field] = { extracted: words, words }
   }
+  return { chart, redFlags: [] }
 }

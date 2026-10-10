@@ -434,6 +434,12 @@
 .chat-error-preview__close {
   font-size: 18px; color: #856404; margin-left: auto; padding: 0 4px;
 }
+.chat-error-preview__retry {
+  font-size: 13px; font-weight: 600; color: #fff; background: #856404;
+  border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer;
+  margin-left: auto; flex-shrink: 0;
+}
+.chat-error-preview__retry:hover { background: #6c4a04; }
 
 .patient-error-overlay {
   position: absolute;
