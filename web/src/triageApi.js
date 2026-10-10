@@ -3,7 +3,14 @@
 // Every call targets `${API_BASE}/api/...`.
 // ════════════════════════════════════════════════════════════════
 
-export const API_BASE = 'https://saves-brandon-hundreds-charms.trycloudflare.com'
+// Current public tunnel endpoint (or same-origin if served through the backend)
+const DEFAULT_TUNNEL = 'https://tiger-principal-threatened-mechanism.trycloudflare.com'
+
+export const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('trycloudflare.com')
+    ? window.location.origin
+    : DEFAULT_TUNNEL)
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
