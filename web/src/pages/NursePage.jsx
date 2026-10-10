@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { sessionStore } from '../mockSessionStore.js'
 import { TIER_COLORS, tierLabel, tierLabelShort } from '../mockData.js'
-import { confirmESI } from '../triageApi.js'
+import {
+  confirmESI,
+  fetchQueue,
+  fetchSessionDetail,
+  mapBackendSessionToCase,
+  checkBackendHealth,
+} from '../triageApi.js'
 import { makeT } from '../i18n.js'
 import LanguageToggle from '../components/LanguageToggle.jsx'
 import ProbabilityBars from '../components/nurse/ProbabilityBars.jsx'
@@ -17,7 +23,9 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
   const setLang = setLangProp ?? setInternalLang
   const t = makeT(lang, 'nurse')
 
-  const [queue, setQueue] = useState([])
+  const [localQueue, setLocalQueue] = useState([])
+  const [backendCases, setBackendCases] = useState([])
+  const [backendLive, setBackendLive] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [selectedESI, setSelectedESI] = useState(null)
   const [isConfirming, setIsConfirming] = useState(false)
@@ -27,11 +35,57 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
   const [showSheets, setShowSheets] = useState(false)
   const timerRef = useRef(null)
 
-  // Subscribe to session store
+  // Subscribe to local session store
   useEffect(() => {
-    const unsub = sessionStore.subscribe((q) => setQueue([...q]))
+    const unsub = sessionStore.subscribe((q) => setLocalQueue([...q]))
     return unsub
   }, [])
+
+  // Poll backend queue and merge live cases
+  useEffect(() => {
+    let active = true
+    async function loadBackendQueue() {
+      try {
+        const health = await checkBackendHealth()
+        if (!active) return
+        if (health.ok) {
+          setBackendLive(true)
+          const res = await fetchQueue()
+          if (!active) return
+          if (res && Array.isArray(res.patients)) {
+            const details = await Promise.all(
+              res.patients.map(async (p) => {
+                try {
+                  const detail = await fetchSessionDetail(p.id)
+                  return mapBackendSessionToCase(detail)
+                } catch (e) {
+                  return null
+                }
+              })
+            )
+            const valid = details.filter(Boolean)
+            if (active) setBackendCases(valid)
+          }
+        } else {
+          setBackendLive(false)
+        }
+      } catch (e) {
+        if (active) setBackendLive(false)
+      }
+    }
+    loadBackendQueue()
+    const interval = setInterval(loadBackendQueue, 3500)
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [])
+
+  // Merged queue: live backend cases at top, preset samples below
+  const queue = [
+    ...backendCases,
+    ...localQueue.filter((l) => !backendCases.some((b) => b.id === l.id)),
+  ]
 
   // Auto-select first case
   useEffect(() => {
@@ -80,18 +134,28 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
     if (timerRef.current) clearInterval(timerRef.current)
     const elapsed = reviewSeconds
     try {
-      await confirmESI(selectedCase.id, selectedESI)
+      await confirmESI(selectedCase.id, selectedESI, elapsed)
       sessionStore.updateCase(selectedCase.id, {
         confirmedESI: selectedESI,
         confirmedAt: new Date().toISOString(),
         reviewSeconds: elapsed,
         status: 'confirmed',
       })
+      if (selectedCase.id.startsWith('s-')) {
+        setBackendCases((prev) =>
+          prev.map((c) =>
+            c.id === selectedCase.id
+              ? { ...c, confirmedESI: selectedESI, confirmedAt: new Date().toISOString(), reviewSeconds: elapsed, status: 'confirmed' }
+              : c
+          )
+        )
+      }
     } catch (e) {
       setShowSaveError(true)
     }
     setIsConfirming(false)
   }, [selectedESI, selectedCase, isConfirming, reviewSeconds])
+
 
   const handleSimulateLoading = useCallback(() => {
     setIsLoading(true)
@@ -108,7 +172,11 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
   }
 
-  const audioNotes = selectedCase ? sessionStore.getAudioNotes(selectedCase.id) : []
+  const audioNotes = selectedCase
+    ? (selectedCase.audioNotes && selectedCase.audioNotes.length > 0
+        ? selectedCase.audioNotes
+        : sessionStore.getAudioNotes(selectedCase.id))
+    : []
 
   return (
     <div className="nurse-page">
@@ -336,11 +404,24 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
                 </div>
               )}
 
-              {/* Sheet previews */}
+              {/* Sheet previews & official PDF */}
               <div className="chart-sheets-section">
-                <button className="win-btn win-btn--toggle" onClick={() => setShowSheets(!showSheets)}>
-                  {showSheets ? '▼' : '▶'} {t('sheetsToggle')}
-                </button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button className="win-btn win-btn--toggle" onClick={() => setShowSheets(!showSheets)}>
+                    {showSheets ? '▼' : '▶'} {t('sheetsToggle')}
+                  </button>
+                  {selectedCase.pdfUrl && (
+                    <a
+                      className="win-btn"
+                      href={selectedCase.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      🖨 {lang === 'es' ? 'Descargar PDF Oficial' : 'Download Official PDF'}
+                    </a>
+                  )}
+                </div>
                 {showSheets && (
                   <div className="chart-sheets-grid">
                     <IntakeSheetPreview caseData={selectedCase} lang={lang} />
@@ -363,8 +444,8 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
           {queue.filter((c) => c.status === 'confirmed').length} {t('statusConfirmed')}
         </span>
         <span className="nurse-statusbar__sep" />
-        <span className="nurse-statusbar__item nurse-statusbar__item--warn">
-          ⚠ DEMO — SAMPLE DATA
+        <span className={`nurse-statusbar__item ${backendLive ? 'nurse-statusbar__item--live' : 'nurse-statusbar__item--warn'}`} style={{ color: backendLive ? '#006400' : '#856404' }}>
+          {backendLive ? '● ENGINE: LIVE (WHISPER + GEMINI + JEV)' : '⚠ DEMO — SAMPLE DATA'}
         </span>
         <span className="nurse-statusbar__spacer" />
         <span className="nurse-statusbar__item nurse-statusbar__item--disclaimer">

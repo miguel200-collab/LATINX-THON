@@ -1,7 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder.js'
 import { INTAKE_QUESTIONS, SAMPLE_ANSWERS, SIMULATED_ERRORS } from '../mockData.js'
-import { sendToNurse } from '../triageApi.js'
+import {
+  sendToNurse,
+  createSession,
+  submitAnswer as apiSubmitAnswer,
+  submitSession as apiSubmitSession,
+  checkBackendHealth,
+} from '../triageApi.js'
 import { sessionStore } from '../mockSessionStore.js'
 import { makeT } from '../i18n.js'
 import LanguageToggle from '../components/LanguageToggle.jsx'
@@ -27,6 +33,8 @@ export default function PatientPage() {
   const [answered, setAnswered] = useState([false, false, false, false, false, false])
   const [showSaveError, setShowSaveError] = useState(false)
   const [showPermissionError, setShowPermissionError] = useState(false)
+  const [backendLive, setBackendLive] = useState(false)
+  const backendSessionIdRef = useRef(null)
   const messagesEndRef = useRef(null)
   const holdTimerRef = useRef(null)
   const holdStartedRef = useRef(false)
@@ -46,12 +54,19 @@ export default function PatientPage() {
   // Translate the error type code from the hook into { title, message }
   const errorInfo = error ? errs[error] : null
 
+  // Check backend health on mount
+  useEffect(() => {
+    checkBackendHealth().then((res) => {
+      if (res.ok) setBackendLive(true)
+    })
+  }, [])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isSending])
 
   // ── Start intake ──
-  const startIntake = useCallback(() => {
+  const startIntake = useCallback(async () => {
     setMessages([{
       id: nextId(), type: 'question', questionId: 1,
       text: qText(0), timestamp: formatTimestamp(),
@@ -59,6 +74,14 @@ export default function PatientPage() {
     setAnswered([false, false, false, false, false, false])
     setShowSaveError(false)
     setCurrentQ(0)
+
+    // Create live backend session if connected
+    try {
+      const sess = await createSession()
+      if (sess?.id) backendSessionIdRef.current = sess.id
+    } catch (e) {
+      backendSessionIdRef.current = null
+    }
   }, [lang])
 
   // ── Advance to next question ──
@@ -91,14 +114,44 @@ export default function PatientPage() {
     setInputText('')
     setIsSending(true)
 
-    // Simulate sending to nurse queue
+    // Send answer to live backend if available
+    let sid = backendSessionIdRef.current
+    if (!sid) {
+      try {
+        const sess = await createSession()
+        if (sess?.id) {
+          sid = sess.id
+          backendSessionIdRef.current = sid
+        }
+      } catch (e) { /* fallback */ }
+    }
+
+    if (sid) {
+      try {
+        const qid = `q${qIndex + 1}`
+        if (audioNote?.blob) {
+          await apiSubmitAnswer(sid, qid, { audioBlob: audioNote.blob, text })
+        } else if (text) {
+          await apiSubmitAnswer(sid, qid, { text })
+        }
+
+        // On the final question (qIndex === 5), trigger full pipeline submission
+        if (qIndex === 5) {
+          await apiSubmitSession(sid)
+        }
+      } catch (e) {
+        // Fallback to local sessionStore
+      }
+    }
+
+    // Always maintain local mock sessionStore fallback
     try {
       const patientData = buildPatientData(messages, text, qIndex)
       const newCase = await sendToNurse(patientData)
       sessionStore.addCase(newCase)
-    } catch (e) { /* demo — won't fail */ }
+    } catch (e) { /* demo fallback */ }
 
-    await new Promise((r) => setTimeout(r, 1200))
+    await new Promise((r) => setTimeout(r, 600))
     setIsSending(false)
     setAnswered((prev) => { const n = [...prev]; n[qIndex] = true; return n })
 
@@ -110,7 +163,7 @@ export default function PatientPage() {
   }, [currentQ, isSending, messages, advanceToNext])
 
   // ── Sample scenario: auto-cover Q1-Q5, require Q6 ──
-  const startSampleScenario = useCallback(() => {
+  const startSampleScenario = useCallback(async () => {
     const msgs = []
     // Q1 with sample answer
     msgs.push({ id: nextId(), type: 'question', questionId: 1, text: qText(0), timestamp: formatTimestamp() })
@@ -129,9 +182,21 @@ export default function PatientPage() {
     setAnswered([true, true, true, true, true, false])
     setCurrentQ(5)
 
+    // Also populate live backend demo if possible
+    try {
+      const sess = await createSession()
+      if (sess?.id) {
+        backendSessionIdRef.current = sess.id
+        for (let i = 1; i <= 5; i++) {
+          await apiSubmitAnswer(sess.id, `q${i}`, { text: sampleAns[i] || 'Sin síntomas' })
+        }
+      }
+    } catch (e) { /* fallback */ }
+
     // Send scenario patient to nurse queue
     sendToNurse(buildScenarioData(lang)).then((c) => sessionStore.addCase(c))
-  }, [lang])
+  }, [lang, sampleAns, qText])
+
 
   // ── Voice recording: mic button handlers ──
   const handleMicPointerDown = useCallback((e) => {
@@ -220,7 +285,7 @@ export default function PatientPage() {
           <div className="patient-header__subtitle">{t('headerSubtitle')}</div>
         </div>
         <LanguageToggle lang={lang} setLang={setLang} variant="light" />
-        <div className="patient-header__demo-tag">DEMO</div>
+        <div className="patient-header__demo-tag">{backendLive ? 'AI LIVE' : 'DEMO'}</div>
       </div>
 
       {/* Progress dots */}
