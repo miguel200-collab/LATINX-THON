@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder.js'
-import { INTAKE_QUESTIONS, SAMPLE_ANSWERS, SIMULATED_ERRORS, simulateSendToNurse } from '../mockData.js'
+import { INTAKE_QUESTIONS, SAMPLE_ANSWERS, SIMULATED_ERRORS } from '../mockData.js'
+import { sendToNurse } from '../triageApi.js'
 import { sessionStore } from '../mockSessionStore.js'
 import { makeT } from '../i18n.js'
 import LanguageToggle from '../components/LanguageToggle.jsx'
@@ -93,7 +94,7 @@ export default function PatientPage() {
     // Simulate sending to nurse queue
     try {
       const patientData = buildPatientData(messages, text, qIndex)
-      const newCase = await simulateSendToNurse(patientData)
+      const newCase = await sendToNurse(patientData)
       sessionStore.addCase(newCase)
     } catch (e) { /* demo — won't fail */ }
 
@@ -129,7 +130,7 @@ export default function PatientPage() {
     setCurrentQ(5)
 
     // Send scenario patient to nurse queue
-    simulateSendToNurse(buildScenarioData(lang)).then((c) => sessionStore.addCase(c))
+    sendToNurse(buildScenarioData(lang)).then((c) => sessionStore.addCase(c))
   }, [lang])
 
   // ── Voice recording: mic button handlers ──

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { sessionStore } from '../mockSessionStore.js'
-import { TIER_COLORS, simulateConfirmESI, tierLabel, tierLabelShort } from '../mockData.js'
+import { TIER_COLORS, tierLabel, tierLabelShort } from '../mockData.js'
+import { confirmESI } from '../triageApi.js'
 import { makeT } from '../i18n.js'
 import LanguageToggle from '../components/LanguageToggle.jsx'
 import ProbabilityBars from '../components/nurse/ProbabilityBars.jsx'
@@ -79,7 +80,7 @@ export default function NursePage({ lang: langProp, setLang: setLangProp }) {
     if (timerRef.current) clearInterval(timerRef.current)
     const elapsed = reviewSeconds
     try {
-      await simulateConfirmESI(selectedCase.id, selectedESI)
+      await confirmESI(selectedCase.id, selectedESI)
       sessionStore.updateCase(selectedCase.id, {
         confirmedESI: selectedESI,
         confirmedAt: new Date().toISOString(),
