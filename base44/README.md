@@ -2,8 +2,9 @@
 
 | Field | Value |
 |---|---|
-| **Published app URL** | `https://tiger-principal-threatened-mechanism.trycloudflare.com/app` |
-| **Patient page path** | `/app` (or `/p`) |
-| **Nurse page path** | `/app` (sign-in PIN: 1234) or `/nurse` |
-| **Judge dashboard** | `https://tiger-principal-threatened-mechanism.trycloudflare.com/` |
+| **Published Base44 URL** | `https://hypnotic-triage-flow-aid.base44.app` |
+| **Unified Tunnel URL (Engine + Frontend + Judges)** | `https://tiger-principal-threatened-mechanism.trycloudflare.com` |
+| **Patient page path** | `https://hypnotic-triage-flow-aid.base44.app` (or `/app`, `/p`) |
+| **Nurse page path** | `https://hypnotic-triage-flow-aid.base44.app` (or `/nurse`, PIN: 1234) |
+| **Judge presentation dashboard** | `https://tiger-principal-threatened-mechanism.trycloudflare.com/` |
 | **Python engine (`API_BASE`)** | `https://tiger-principal-threatened-mechanism.trycloudflare.com` |
