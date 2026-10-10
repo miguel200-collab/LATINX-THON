@@ -1,0 +1,22 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+output/
+.cache/
+.uv-cache/
+.DS_Store
+.vscode/
+
+# Hidden prompt, spec, and planning files
+Archive/
+Archive.zip
+SPEC.md
+AGENTS.md
+base44/FRONTEND.md
+*BUNDLE*.md
+*PROMPT*.md
+*TEST_DRIVE*.md
+*bundle*.md
+*prompt*.md
